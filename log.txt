@@ -1,0 +1,285 @@
+议题说明 
+议题一 开发一个根据一篇小说生成相应漫画的应用。 
+请回答: 
+1.你计划将这个产品面向什么类型的用户?这些类型的用户他们面临什么样的痛点，你设想的用户故事是什么样呢? 
+2.你认为这个产品实现上的挑战是什么，你计划如何应对这些挑战? 
+3.你计划采纳哪家公司的哪个模型的AIGC功能?你对比了哪些，你为什么选择用该API? 
+4.你对这个产品有哪些未来规划中的功能?你为何觉得这些能力是重要的? 
+请开发以上应用。要求不能调用第三方的agent能力，只需允许调用LLM、各类AIGC模型和语音TTS能力。
+同时针对以上1-4点，请把你的思考整理成文档，作为作品的说明一并提交。
+
+
+@log.txt 根据整体项目情况与log.txt，
+新建一个readme文档，新文档还是把议题说明写在最前面（1-9行），
+然后总结一下现在情况，
+从依赖配置到gitignore到虚拟环境的创建、数据库的连接、还有现在的后端与前端都干了哪些东西
+
+
+
+python版本
+
+你不需要“降级”你电脑的 Python。你只需要\*\*“并存”**，然后**告诉虚拟环境（venv）它该用哪个\*\*。
+
+你现在电脑上装了 Python 3.13。你需要做的，只是**再安装一个 Python 3.11**，然后用 3.11 来**创建**这个项目的虚拟环境。你其他的项目**完全不受影响**。
+
+#### 步骤一：安装 Python 3.11 (与 3.13 并存)
+
+1.  去 Python 官方网站 (python.org)。
+2.  下载 **Python 3.11** 的 Windows 64位安装包 (Windows installer)。
+3.  运行安装包。**在安装界面上，请注意：**
+      * **不要** 勾选 "Make this the default Python" 或 "Add to PATH" （如果你担心影响其他项目，就都别勾选）。
+      * **必须** 确保 "Install for all users" 和 "Install `py.exe` launcher" 是勾选的（通常默认就是）。
+4.  完成安装。现在你的电脑上同时拥有 Python 3.13 和 3.11。`py.exe` 启动器知道它们分别在哪里。
+
+#### 步骤二：使用 3.11 创建新的虚拟环境
+
+这是最关键的一步。
+
+1.  打开你的命令行，进入 `backend` 目录。
+
+2.  **删除旧的、坏的 venv：**
+
+    ```bash
+    rmdir /s /q venv 
+    ```
+
+    *(如果提示无权限，直接用文件管理器右键删除 `venv` 文件夹)*
+
+3.  **【魔法在这里】** 使用 `py.exe` 启动器，**指定用 3.11 版本**来创建 venv：
+
+    ```bash
+    py -3.11 -m venv venv
+    ```
+
+      * `py -3.11` 的意思就是“嘿，Windows，请使用我安装的 3.11 版本的 Python...”。
+      * `... -m venv venv` 的意思就是“...来创建一个名为 venv 的虚拟环境”。
+
+4.  **激活新环境并安装依赖：**
+
+    ```bash
+    # 激活这个新创建的、基于 3.11 的 venv
+    venv\Scripts\activate
+
+    # 你的命令行提示符现在会显示 (venv)
+    # 检查一下版本 (可选)
+    (venv) ...> python -V 
+    # (此时应该会显示 Python 3.11.x)
+
+    # 再次运行安装
+    (venv) ...> pip install -r requirements.txt 
+    ```
+
+**大功告成。**
+
+这一次，`pip` 会在 Python 3.11 的环境里运行，它会找到 `asyncpg` 官方为 Python 3.11 提供的、**已经编译好的** `.whl` 文件，直接下载安装，**根本不会在你本地进行编译**，也就不会再报错了。
+
+你的项目现在运行在隔离的 3.11 venv 中，而你其他所有的项目和你全局的 Python 3.13 毫发无损。
+
+
+
+
+
+py -3.11 -m venv venv
+venv\Scripts\activate
+(venv) ...> python -V
+pip install -r requirements.txt
+# 启动服务
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+
+
+
+supabase数据库设计与创建
+-- ----------------------------
+-- 0. 创建一个函数，用于自动更新 'updated_at' 字段的时间戳
+-- (PostgreSQL 中 'ON UPDATE' 功能的实现方式)
+-- ----------------------------
+CREATE OR REPLACE FUNCTION trigger_set_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = timezone('utc'::text, now());
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- ----------------------------
+-- 1. 为 'projects' 表创建 ENUM 类型
+-- (PostgreSQL 推荐的方式)
+-- ----------------------------
+CREATE TYPE project_visibility AS ENUM ('private', 'public');
+
+
+-- ----------------------------
+-- 表 1: users (用户信息表)
+-- ----------------------------
+CREATE TABLE "users" (
+    "user_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- 改为 UUID 类型并自动生成
+    "username" VARCHAR(100) UNIQUE NOT NULL,
+    "email" VARCHAR(255) UNIQUE NOT NULL,
+    "hashed_password" VARCHAR(255) NOT NULL,
+    "credit_balance" INT DEFAULT 0,
+    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()), -- Supabase 推荐使用带时区的时间
+    "updated_at" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- 表 1 的注解
+COMMENT ON TABLE "users" IS '用户信息表';
+COMMENT ON COLUMN "users"."user_id" IS '唯一用户ID (UUID)';
+COMMENT ON COLUMN "users"."username" IS '用户名 (用于登录，必须唯一)';
+COMMENT ON COLUMN "users"."email" IS '电子邮箱 (用于登录或找回密码，必须唯一)';
+COMMENT ON COLUMN "users"."hashed_password" IS '加密后的密码 (例如使用bcrypt或Argon2)';
+COMMENT ON COLUMN "users"."credit_balance" IS '可使用额度 (例如: 剩余可生成图片张数或Token数)';
+COMMENT ON COLUMN "users"."created_at" IS '账户创建时间';
+COMMENT ON COLUMN "users"."updated_at" IS '账户信息最后更新时间';
+
+-- 表 1 的 'updated_at' 触发器
+CREATE TRIGGER set_users_updated_at
+BEFORE UPDATE ON "users"
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp();
+
+
+-- ----------------------------
+-- 表 2: projects (漫画项目表)
+-- ----------------------------
+DROP TABLE IF EXISTS "projects";
+CREATE TABLE "projects" (
+    "project_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- 改为 UUID
+    "user_id" UUID NOT NULL, -- 改为 UUID
+    "title" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "visibility" project_visibility DEFAULT 'private', -- 使用上面创建的 ENUM 类型
+    "default_style_prompt" TEXT,
+    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    "updated_at" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE
+);
+
+-- 表 2 的注解
+COMMENT ON TABLE "projects" IS '漫画项目表';
+COMMENT ON COLUMN "projects"."project_id" IS '唯一项目ID (UUID)';
+COMMENT ON COLUMN "projects"."user_id" IS '外键，关联到 users(user_id)，表示该项目的所有者';
+COMMENT ON COLUMN "projects"."title" IS '项目标题 (例如 "我的XX小说改编")';
+COMMENT ON COLUMN "projects"."description" IS '项目描述';
+COMMENT ON COLUMN "projects"."visibility" IS '可见性：private(仅自己), public(他人可见)';
+COMMENT ON COLUMN "projects"."default_style_prompt" IS '项目的默认风格提示词 (例如 "shonen manga, high contrast")';
+COMMENT ON COLUMN "projects"."created_at" IS '项目创建时间';
+COMMENT ON COLUMN "projects"."updated_at" IS '项目最后更新时间';
+
+-- 表 2 的 'updated_at' 触发器
+CREATE TRIGGER set_projects_updated_at
+BEFORE UPDATE ON "projects"
+FOR EACH ROW
+EXECUTE FUNCTION trigger_set_timestamp();
+
+
+-- ----------------------------
+-- 表 3: source_texts (小说原文表)
+-- ----------------------------
+DROP TABLE IF EXISTS "source_texts";
+CREATE TABLE "source_texts" (
+    "text_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- 改为 UUID
+    "project_id" UUID NOT NULL, -- 改为 UUID
+    "title" VARCHAR(255) DEFAULT 'Untitled Chapter',
+    "raw_content" TEXT NOT NULL, -- LONGTEXT 变为 TEXT
+    "order_index" INT DEFAULT 0,
+    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    FOREIGN KEY ("project_id") REFERENCES "projects"("project_id") ON DELETE CASCADE
+);
+
+-- 表 3 的注解
+COMMENT ON TABLE "source_texts" IS '小说原文表';
+COMMENT ON COLUMN "source_texts"."text_id" IS '唯一文本ID (UUID)';
+COMMENT ON COLUMN "source_texts"."project_id" IS '外键，关联到 projects(project_id)';
+COMMENT ON COLUMN "source_texts"."title" IS '标题 (例如 "第一章" 或 "番外篇")';
+COMMENT ON COLUMN "source_texts"."raw_content" IS '存储用户上传的原始小说文本 (PostgreSQL的TEXT类型已足够)';
+COMMENT ON COLUMN "source_texts"."order_index" IS '用于章节或文本片段的排序';
+COMMENT ON COLUMN "source_texts"."created_at" IS '上传时间';
+
+
+-- ----------------------------
+-- 表 4: characters (项目角色表)
+-- ----------------------------
+DROP TABLE IF EXISTS "characters";
+CREATE TABLE "characters" (
+    "character_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- 改为 UUID
+    "project_id" UUID NOT NULL, -- 改为 UUID
+    "name" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "reference_image_urls" JSON, -- PostgreSQL 原生支持 JSON, 很好
+    "lora_model_path" VARCHAR(1024),
+    "trigger_word" VARCHAR(100),
+    FOREIGN KEY ("project_id") REFERENCES "projects"("project_id") ON DELETE CASCADE
+);
+
+-- 表 4 的注解
+COMMENT ON TABLE "characters" IS '项目角色表';
+COMMENT ON COLUMN "characters"."character_id" IS '唯一角色ID (UUID)';
+COMMENT ON COLUMN "characters"."project_id" IS '外键，关联到 projects(project_id)';
+COMMENT ON COLUMN "characters"."name" IS '角色名称 (例如 "张三")';
+COMMENT ON COLUMN "characters"."description" IS '角色外貌、性格描述 (给LLM用)';
+COMMENT ON COLUMN "characters"."reference_image_urls" IS '角色参考图URL列表 (JSON数组格式, 存储S3/OSS的URL)';
+COMMENT ON COLUMN "characters"."lora_model_path" IS '指向 S3/OSS 上的LoRA模型或Embedding文件路径';
+COMMENT ON COLUMN "characters"."trigger_word" IS '触发该LoRA的关键词 (例如 "ohwx_zhangsan")';
+
+
+
+
+
+
+
+有登录注册，未登录状态下无法使用功能，只能看别人的作品
+    数据库：用户信息表（账号密码可使用额度等）
+
+文本解析层（LLM）：把原文拆成场景、人物、动作、情绪、关键道具与对话；输出结构化脚本（JSON）。
+    数据库：用户上传的小说文字或者文件应进行存储，具体如何存储这些大量的文字还不确定
+
+分镜规划层（LLM 或规则逻辑）：根据场景节奏决定每页面板数、镜头类型、构图要点（近景/远景/鸟瞰）并生成每个 panel 的描述。
+    数据库：文本解析之后的详细分镜信息应进行存储，存储这些文字也不确定怎么存
+
+
+
+
+
+文本到分镜（story-to-panel）需要理解剧情节点、镜头构图、节奏。
+
+图像一致性（人物在不同画面保持相貌、服装）。
+
+对话气泡与文字排版的可读性。
+
+生成漫画风格的高质量图像（漫画线条、上色、阴影）。
+
+长文本的上下文保持与分场景切分。
+
+性能与成本（大模型调用、GPU）。
+
+应对策略
+
+分层管线（pipeline）设计：
+
+文本解析层（LLM）：把原文拆成场景、人物、动作、情绪、关键道具与对话；输出结构化脚本（JSON）。
+
+分镜规划层（LLM 或规则逻辑）：根据场景节奏决定每页面板数、镜头类型、构图要点（近景/远景/鸟瞰）并生成每个 panel 的描述。
+
+图像生成层（AIGC）：对每个 panel 的描述调用文本到图像模型（可配合 ControlNet/pose/segmentation 引导）生成草稿，使用人物一致性机制（参考：人物 embedding、参考图像或 LoRA/专属 embedding）以维持一致性。
+
+后处理层：气泡排版（文本渲染）、图像合成、色彩调整、去噪与风格一致化（可用图像到图像微调/循环修正）。
+
+保持人物一致性的技巧：
+
+允许用户上传 2–4 张角色参考图（或角色描述卡），并使用专属 embedding / LoRA / DreamBooth（或自托管等价）以保持风格一致。
+
+在生成中使用先生成草图，然后对草图做风格迁移的两阶段流程。
+
+长文本处理：分段摘要 + 场景划分，先用 LLM 做“剧情压缩”，再逐段生成分镜。
+
+成本控制：
+
+把实时交互（浏览器预览、小图）用小模型或低分辨率生成；把高质量渲染放到异步队列，按需付费或让用户购买渲染额度。
+
+缓存与去重（相同 prompt 与相同种子不重复生成）。
+
+可控性与编辑性：提供 UI 让用户修改分镜（移动/合并/分割 panel）、替换单幅图像并重新批量渲染。
+
+

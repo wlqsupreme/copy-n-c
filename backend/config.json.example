@@ -1,0 +1,15 @@
+{
+  "qiniu_api_key": "你的七牛云API密钥",
+  "model": "gpt-oss-120b",
+  "max_tokens": 4096,
+  "temperature": 0.2,
+  "timeout": 60,
+  "database": {
+    "url": "postgresql://postgres:[YOUR_PASSWORD]@db.ihpmirffjziqvkkaplpl.supabase.co:5432/postgres",
+    "host": "db.ihpmirffjziqvkkaplpl.supabase.co",
+    "port": 5432,
+    "database": "postgres",
+    "username": "postgres",
+    "password": "你的数据库密码"
+  }
+}
