@@ -12,7 +12,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from config import config
-from database import db_manager
+from db import init_database, close_database, db_client, save_storyboard, create_project, Storyboard
 
 QINIU_API_BASE = "https://openai.qiniu.com/v1"  # 七牛 openai 兼容入口
 
@@ -38,9 +38,14 @@ async def startup_event():
     """应用启动时初始化数据库"""
     print("🚀 应用启动中...")
     if config.is_database_configured():
-        success = await db_manager.connect()
+        success = await init_database()
         if success:
-            await db_manager.init_tables()
+            # 测试数据库连接
+            is_connected = await db_client.test_connection()
+            if is_connected:
+                print("✅ Supabase数据库连接测试成功")
+            else:
+                print("❌ Supabase数据库连接测试失败")
     else:
         print("⚠️ 数据库未配置，跳过数据库初始化")
 
@@ -48,13 +53,20 @@ async def startup_event():
 async def shutdown_event():
     """应用关闭时清理资源"""
     print("🛑 应用关闭中...")
-    await db_manager.close()
+    await close_database()
 
 
 class ParseRequest(BaseModel):
     title: str | None = None
     text: str
     auto_segment: bool = True  # 是否自动分段
+    user_id: str | None = None  # 用户ID（可选）
+    project_id: str | None = None  # 项目ID（可选）
+
+
+class SaveStoryboardRequest(BaseModel):
+    project_id: str
+    storyboard: Dict[str, Any]  # 分镜数据
 
 
 @app.get("/health")
@@ -88,12 +100,38 @@ async def parse_text(req: ParseRequest):
             print(f"✅ 第 {i+1} 段完成，生成 {len(pages)} 页")
         
         print(f"🎉 所有分段处理完成，共生成 {len(all_pages)} 页")
+        
+        # 如果提供了项目ID，保存分镜到数据库
+        if req.project_id and db_client.is_connected:
+            try:
+                storyboard = Storyboard.from_dict({"pages": all_pages})
+                success = await save_storyboard(req.project_id, storyboard)
+                if success:
+                    print(f"✅ 分镜已保存到项目 {req.project_id}")
+                else:
+                    print(f"⚠️ 分镜保存失败")
+            except Exception as e:
+                print(f"❌ 保存分镜到数据库失败: {e}")
+        
         return {"ok": True, "storyboard": {"pages": all_pages}, "segments_count": len(segments)}
     else:
         print(f"🎬 直接处理短文本...")
         # 直接处理短文本
         pages = await generate_storyboard_for_segment(req.text, req.title, 1)
         print(f"✅ 短文本处理完成，生成 {len(pages)} 页")
+        
+        # 如果提供了项目ID，保存分镜到数据库
+        if req.project_id and db_client.is_connected:
+            try:
+                storyboard = Storyboard.from_dict({"pages": pages})
+                success = await save_storyboard(req.project_id, storyboard)
+                if success:
+                    print(f"✅ 分镜已保存到项目 {req.project_id}")
+                else:
+                    print(f"⚠️ 分镜保存失败")
+            except Exception as e:
+                print(f"❌ 保存分镜到数据库失败: {e}")
+        
         return {"ok": True, "storyboard": {"pages": pages}}
 
 
@@ -238,3 +276,135 @@ async def call_qiniu_api(messages: list) -> dict:
                 parsed = None
 
     return parsed
+
+
+@app.post("/api/v1/save-storyboard")
+async def save_storyboard_endpoint(req: SaveStoryboardRequest):
+    """
+    保存分镜数据到数据库
+    """
+    if not db_client.is_connected:
+        raise HTTPException(status_code=500, detail="数据库未连接")
+    
+    try:
+        storyboard = Storyboard.from_dict(req.storyboard)
+        success = await save_storyboard(req.project_id, storyboard)
+        
+        if success:
+            return {"ok": True, "message": "分镜保存成功"}
+        else:
+            raise HTTPException(status_code=500, detail="分镜保存失败")
+            
+    except Exception as e:
+        print(f"❌ 保存分镜失败: {e}")
+        raise HTTPException(status_code=500, detail=f"保存分镜失败: {str(e)}")
+
+
+@app.post("/api/v1/create-project")
+async def create_project_endpoint(
+    user_id: str,
+    title: str,
+    description: str | None = None,
+    visibility: str = "private"
+):
+    """
+    创建新项目
+    """
+    if not db_client.is_connected:
+        raise HTTPException(status_code=500, detail="数据库未连接")
+    
+    try:
+        from db import ProjectVisibility
+        
+        # 验证visibility参数
+        try:
+            vis_enum = ProjectVisibility(visibility)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="无效的可见性设置")
+        
+        project = await create_project(
+            user_id=user_id,
+            title=title,
+            description=description,
+            visibility=vis_enum
+        )
+        
+        if project:
+            return {"ok": True, "project": project.to_dict()}
+        else:
+            raise HTTPException(status_code=500, detail="项目创建失败")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ 创建项目失败: {e}")
+        raise HTTPException(status_code=500, detail=f"创建项目失败: {str(e)}")
+
+
+@app.get("/api/v1/projects/{user_id}")
+async def get_user_projects(user_id: str):
+    """
+    获取用户的项目列表
+    """
+    if not db_client.is_connected:
+        raise HTTPException(status_code=500, detail="数据库未连接")
+    
+    try:
+        from db import get_projects_by_user
+        
+        projects = await get_projects_by_user(user_id)
+        return {"ok": True, "projects": [project.to_dict() for project in projects]}
+        
+    except Exception as e:
+        print(f"❌ 获取用户项目失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取项目失败: {str(e)}")
+
+
+@app.get("/api/v1/project/{project_id}")
+async def get_project(project_id: str):
+    """
+    获取项目详情
+    """
+    if not db_client.is_connected:
+        raise HTTPException(status_code=500, detail="数据库未连接")
+    
+    try:
+        from db import get_project_by_id, load_storyboard
+        
+        project = await get_project_by_id(project_id)
+        if not project:
+            raise HTTPException(status_code=404, detail="项目不存在")
+        
+        # 加载分镜数据
+        storyboard = await load_storyboard(project_id)
+        
+        result = project.to_dict()
+        if storyboard:
+            result["storyboard"] = storyboard.to_dict()
+        
+        return {"ok": True, "project": result}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ 获取项目失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取项目失败: {str(e)}")
+
+
+@app.get("/api/v1/public-projects")
+async def get_public_projects(limit: int = 20, offset: int = 0):
+    """
+    获取公开项目列表
+    """
+    if not db_client.is_connected:
+        raise HTTPException(status_code=500, detail="数据库未连接")
+    
+    try:
+        from db import get_public_projects
+        
+        projects = await get_public_projects(limit=limit, offset=offset)
+        return {"ok": True, "projects": [project.to_dict() for project in projects]}
+        
+    except Exception as e:
+        print(f"❌ 获取公开项目失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取公开项目失败: {str(e)}")

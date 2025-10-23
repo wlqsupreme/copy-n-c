@@ -12,7 +12,12 @@ class Config:
         self.temperature: float = 0.2
         self.timeout: int = 60
         
-        # 数据库配置
+        # Supabase配置
+        self.supabase_url: Optional[str] = None
+        self.supabase_anon_key: Optional[str] = None
+        self.supabase_service_role_key: Optional[str] = None
+        
+        # 数据库配置（保留兼容性）
         self.database_url: Optional[str] = None
         self.database_host: Optional[str] = None
         self.database_port: int = 5432
@@ -38,7 +43,13 @@ class Config:
                     self.temperature = config_data.get('temperature', self.temperature)
                     self.timeout = config_data.get('timeout', self.timeout)
                     
-                    # 加载数据库配置
+                    # 加载Supabase配置
+                    supabase_config = config_data.get('supabase', {})
+                    self.supabase_url = supabase_config.get('url')
+                    self.supabase_anon_key = supabase_config.get('anon_key')
+                    self.supabase_service_role_key = supabase_config.get('service_role_key')
+                    
+                    # 加载数据库配置（保留兼容性）
                     db_config = config_data.get('database', {})
                     self.database_url = db_config.get('url')
                     self.database_host = db_config.get('host')
@@ -87,13 +98,10 @@ class Config:
         return self.api_key is not None and len(self.api_key.strip()) > 0
     
     def is_database_configured(self) -> bool:
-        """检查数据库配置是否完整"""
+        """检查Supabase配置是否完整"""
         return (
-            self.database_url is not None and len(self.database_url.strip()) > 0
-        ) or (
-            self.database_host is not None and 
-            self.database_username is not None and 
-            self.database_password is not None
+            self.supabase_url is not None and len(self.supabase_url.strip()) > 0 and
+            self.supabase_service_role_key is not None and len(self.supabase_service_role_key.strip()) > 0
         )
     
     def get_error_message(self) -> str:
