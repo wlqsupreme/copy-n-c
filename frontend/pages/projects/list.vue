@@ -84,6 +84,7 @@
             </view>
             
             <view class="project-actions">
+              <button class="action-btn storyboard" @click.stop="editStoryboard(project)">编辑分镜</button>
               <button class="action-btn edit" @click.stop="editProject(project)">编辑</button>
               <button class="action-btn delete" @click.stop="deleteProject(project)">删除</button>
             </view>
@@ -316,6 +317,12 @@ export default {
     openProject(project) {
       uni.navigateTo({
         url: `/pages/projects/detail?projectId=${project.project_id}`
+      })
+    },
+    
+    editStoryboard(project) {
+      uni.navigateTo({
+        url: `/pages/storyboard/layout-planner?project_id=${project.project_id}`
       })
     },
     
@@ -556,6 +563,11 @@ export default {
   border-radius: 8rpx;
   font-size: 24rpx;
   font-weight: bold;
+}
+
+.action-btn.storyboard {
+  background-color: #007aff;
+  color: #ffffff;
 }
 
 .action-btn.edit {

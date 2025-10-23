@@ -2,7 +2,18 @@
   <view class="container">
     <view class="header">
       <text class="title">分镜规划</text>
-      <button class="back-btn" @click="goBack">返回</button>
+      <view class="header-actions">
+        <button 
+          class="save-btn" 
+          @click="saveStoryboardToDatabase" 
+          :disabled="isLoading || !hasUnsavedChanges"
+          v-if="projectId"
+        >
+          <text v-if="isLoading">保存中...</text>
+          <text v-else>保存分镜</text>
+        </button>
+        <button class="back-btn" @click="goBack">返回</button>
+      </view>
     </view>
     
     <view class="storyboard-content">
@@ -150,16 +161,20 @@ export default {
         emotion: ''
       },
       editingPageIndex: -1,
-      editingPanelIndex: -1
+      editingPanelIndex: -1,
+      projectId: null,
+      isLoading: false,
+      hasUnsavedChanges: false
     }
   },
   
   onLoad(options) {
-    // 从上一页接收分镜数据
+    // 场景一：从上一页接收分镜数据（新建分镜）
     if (options.storyboard) {
       try {
         const storyboard = JSON.parse(decodeURIComponent(options.storyboard))
         this.pages = storyboard.pages || []
+        console.log('加载新建分镜数据:', this.pages)
       } catch (e) {
         console.error('解析分镜数据失败:', e)
         uni.showToast({
@@ -168,11 +183,159 @@ export default {
         })
       }
     }
+    // 场景二：从数据库加载已有分镜
+    else if (options.project_id) {
+      this.projectId = options.project_id
+      this.loadExistingStoryboard(options.project_id)
+    }
+    else {
+      uni.showToast({
+        title: '缺少必要参数',
+        icon: 'none'
+      })
+      setTimeout(() => {
+        uni.navigateBack()
+      }, 1500)
+    }
   },
   
   methods: {
+    // 场景二：从数据库加载已有分镜
+    async loadExistingStoryboard(projectId) {
+      this.isLoading = true
+      uni.showLoading({
+        title: '加载分镜中...'
+      })
+      
+      try {
+        const response = await uni.request({
+          url: `http://localhost:8000/api/v1/project/${projectId}`,
+          method: 'GET',
+          header: {
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (response.statusCode === 200 && response.data) {
+          const projectData = response.data
+          console.log('从数据库加载的项目数据:', projectData)
+          
+          // 解析分镜数据
+          if (projectData.storyboard_data) {
+            try {
+              const storyboardData = typeof projectData.storyboard_data === 'string' 
+                ? JSON.parse(projectData.storyboard_data) 
+                : projectData.storyboard_data
+              
+              this.pages = storyboardData.pages || []
+              console.log('解析后的分镜页面:', this.pages)
+              
+              uni.showToast({
+                title: '分镜加载成功',
+                icon: 'success'
+              })
+            } catch (parseError) {
+              console.error('解析分镜数据失败:', parseError)
+              uni.showToast({
+                title: '分镜数据格式错误',
+                icon: 'none'
+              })
+            }
+          } else {
+            // 如果没有分镜数据，初始化为空数组
+            this.pages = []
+            uni.showToast({
+              title: '暂无分镜数据',
+              icon: 'none'
+            })
+          }
+        } else {
+          throw new Error(`请求失败: ${response.statusCode}`)
+        }
+      } catch (error) {
+        console.error('加载分镜失败:', error)
+        uni.showToast({
+          title: '加载分镜失败',
+          icon: 'none'
+        })
+        // 加载失败时初始化为空数组
+        this.pages = []
+      } finally {
+        this.isLoading = false
+        uni.hideLoading()
+      }
+    },
+    
+    // 场景三：保存分镜到数据库
+    async saveStoryboardToDatabase() {
+      if (!this.projectId) {
+        uni.showToast({
+          title: '缺少项目ID',
+          icon: 'none'
+        })
+        return false
+      }
+      
+      this.isLoading = true
+      uni.showLoading({
+        title: '保存中...'
+      })
+      
+      try {
+        const storyboardData = {
+          pages: this.pages
+        }
+        
+        const response = await uni.request({
+          url: 'http://localhost:8000/api/v1/save-storyboard',
+          method: 'POST',
+          header: {
+            'Content-Type': 'application/json'
+          },
+          data: {
+            project_id: this.projectId,
+            storyboard_data: storyboardData
+          }
+        })
+        
+        if (response.statusCode === 200) {
+          this.hasUnsavedChanges = false
+          uni.showToast({
+            title: '保存成功',
+            icon: 'success'
+          })
+          return true
+        } else {
+          throw new Error(`保存失败: ${response.statusCode}`)
+        }
+      } catch (error) {
+        console.error('保存分镜失败:', error)
+        uni.showToast({
+          title: '保存失败，请重试',
+          icon: 'none'
+        })
+        return false
+      } finally {
+        this.isLoading = false
+        uni.hideLoading()
+      }
+    },
+    
     goBack() {
-      uni.navigateBack()
+      // 如果有未保存的更改，提示用户
+      if (this.hasUnsavedChanges) {
+        uni.showModal({
+          title: '未保存的更改',
+          content: '您有未保存的更改，确定要离开吗？',
+          success: (res) => {
+            if (res.confirm) {
+              uni.navigateBack()
+            }
+          }
+        })
+      } else {
+        uni.navigateBack()
+      }
     },
     
     editPanel(pageIndex, panelIndex) {
@@ -189,7 +352,7 @@ export default {
       this.showEditModal = true
     },
     
-    savePanel() {
+    async savePanel() {
       if (!this.editingPanel.description.trim()) {
         uni.showToast({
           title: '请输入场景描述',
@@ -208,10 +371,19 @@ export default {
       panel.emotion = this.editingPanel.emotion
       
       this.closeModal()
-      uni.showToast({
-        title: '保存成功',
-        icon: 'success'
-      })
+      
+      // 标记有未保存的更改
+      this.hasUnsavedChanges = true
+      
+      // 如果有项目ID，自动保存到数据库
+      if (this.projectId) {
+        await this.saveStoryboardToDatabase()
+      } else {
+        uni.showToast({
+          title: '保存成功',
+          icon: 'success'
+        })
+      }
     },
     
     deletePanel(pageIndex, panelIndex) {
@@ -225,6 +397,8 @@ export default {
             this.pages[pageIndex].panels.forEach((panel, index) => {
               panel.panel_index = index + 1
             })
+            // 标记有未保存的更改
+            this.hasUnsavedChanges = true
           }
         }
       })
@@ -241,6 +415,8 @@ export default {
             this.pages.forEach((page, index) => {
               page.page_index = index + 1
             })
+            // 标记有未保存的更改
+            this.hasUnsavedChanges = true
           }
         }
       })
@@ -272,10 +448,30 @@ export default {
   border-radius: 10rpx;
 }
 
+.header-actions {
+  display: flex;
+  gap: 15rpx;
+  align-items: center;
+}
+
 .title {
   font-size: 48rpx;
   font-weight: bold;
   color: #333;
+}
+
+.save-btn {
+  padding: 10rpx 20rpx;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5rpx;
+  font-size: 28rpx;
+}
+
+.save-btn:disabled {
+  background-color: #6c757d;
+  opacity: 0.6;
 }
 
 .back-btn {
