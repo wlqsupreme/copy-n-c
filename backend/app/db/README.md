@@ -65,8 +65,13 @@ backend/app/db/
 #### 原文操作
 - `create_source_text()` - 创建原文记录
 - `get_source_texts_by_project()` - 获取项目的所有原文
-- `save_storyboard()` - 保存分镜数据
-- `load_storyboard()` - 加载分镜数据
+
+#### 分镜操作
+- `create_storyboard_panel()` - 创建分镜面板
+- `get_storyboards_by_text_id()` - 根据原文ID获取分镜列表
+- `update_storyboard_panel()` - 更新分镜面板
+- `get_storyboard_by_id()` - 根据ID获取分镜面板
+- `delete_storyboard_panel()` - 删除分镜面板
 
 #### 角色操作
 - `create_character()` - 创建角色
@@ -83,15 +88,17 @@ backend/app/db/
 
 ### 新增接口
 
-1. **POST /api/v1/save-storyboard** - 保存分镜数据
-2. **POST /api/v1/create-project** - 创建新项目
-3. **GET /api/v1/projects/{user_id}** - 获取用户项目列表
-4. **GET /api/v1/project/{project_id}** - 获取项目详情
-5. **GET /api/v1/public-projects** - 获取公开项目列表
+1. **POST /api/v1/parse** - 解析文本并生成分镜（重构）
+2. **GET /api/v1/storyboards** - 获取分镜列表
+3. **PUT /api/v1/storyboard/{storyboard_id}** - 更新分镜面板
+4. **POST /api/v1/create-project** - 创建新项目
+5. **GET /api/v1/projects/{user_id}** - 获取用户项目列表
+6. **GET /api/v1/project/{project_id}** - 获取项目详情
+7. **GET /api/v1/public-projects** - 获取公开项目列表
 
 ### 更新接口
 
-- **POST /api/v1/parse** - 增加了自动保存分镜到数据库的功能
+- **POST /api/v1/parse** - 重构为新的数据流，先保存原文，再生成分镜
 
 ## 数据库表结构
 
@@ -131,6 +138,21 @@ backend/app/db/
 - `lora_model_path` (VARCHAR)
 - `trigger_word` (VARCHAR)
 
+### storyboards表
+- `storyboard_id` (UUID, 主键)
+- `project_id` (UUID, 外键)
+- `source_text_id` (UUID, 外键)
+- `panel_index` (INT)
+- `original_text_snippet` (TEXT)
+- `character_appearance` (TEXT)
+- `scene_and_lighting` (TEXT)
+- `camera_and_composition` (TEXT)
+- `expression_and_action` (TEXT)
+- `style_requirements` (TEXT)
+- `generated_image_url` (VARCHAR)
+- `created_at`, `updated_at` (TIMESTAMP)
+- `character_id` (UUID, 外键，可选)
+
 ## 使用方法
 
 ### 1. 导入模块
@@ -139,7 +161,8 @@ from app.db import (
     init_database, close_database, db_client,
     create_user, get_user_by_username,
     create_project, get_projects_by_user,
-    save_storyboard, load_storyboard
+    create_source_text, create_storyboard_panel,
+    get_storyboards_by_text_id, update_storyboard_panel
 )
 ```
 
@@ -161,9 +184,21 @@ user = await create_user("username", "email@example.com", "hashed_password")
 # 创建项目
 project = await create_project(user.user_id, "项目标题", "项目描述")
 
-# 保存分镜
-storyboard = Storyboard.from_dict({"pages": [...]})
-await save_storyboard(project.project_id, storyboard)
+# 创建原文
+source_text = await create_source_text(project.project_id, "第一章", "小说内容...")
+
+# 创建分镜面板
+panel_data = {
+    "original_text_snippet": "原文片段",
+    "character_appearance": "角色外貌",
+    "scene_and_lighting": "场景光照",
+    "camera_and_composition": "镜头构图",
+    "expression_and_action": "表情动作",
+    "style_requirements": "风格要求"
+}
+storyboard_panel = await create_storyboard_panel(
+    project.project_id, source_text.text_id, 0, panel_data
+)
 ```
 
 ### 4. 关闭连接
@@ -203,8 +238,8 @@ python test_db.py
 1. **连接池**: 使用asyncpg连接池，最大10个连接
 2. **错误处理**: 所有操作都有异常处理
 3. **JSON字段**: 角色参考图片URLs使用JSON存储
-4. **分镜存储**: 暂时存储在项目的description字段中（JSON格式）
+4. **分镜存储**: 现在使用专门的storyboards表存储分镜数据
 5. **UUID**: 所有主键和外键使用UUID类型
 6. **时区**: 时间戳使用UTC时区
 
-这个数据库模块提供了完整的Supabase操作功能，支持用户管理、项目管理、原文管理、角色管理和分镜管理等功能。
+这个数据库模块提供了完整的Supabase操作功能，支持用户管理、项目管理、原文管理、角色管理和分镜管理等功能。新的数据流实现了正确的数据库表关系和数据持久化。

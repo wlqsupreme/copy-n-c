@@ -322,7 +322,7 @@ export default {
     
     editStoryboard(project) {
       uni.navigateTo({
-        url: `/pages/storyboard/layout-planner?project_id=${project.project_id}`
+        url: `/pages/storyboard/script-analyzer?project_id=${project.project_id}`
       })
     },
     

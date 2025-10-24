@@ -59,13 +59,19 @@
 		text: '',
 		result: null,
 		loading: false,
-		selectedFile: null
+		selectedFile: null,
+		projectId: null
 	  }
 	},
 	computed: {
 	  formattedResult() {
 		if (!this.result) return ''
 		return JSON.stringify(this.result, null, 2)
+	  }
+	},
+	onLoad(options) {
+	  if (options.project_id) {
+		this.projectId = options.project_id;
 	  }
 	},
 	methods: {
@@ -140,7 +146,8 @@
 			},
 			data: {
 			  title: this.title,
-			  text: this.text
+			  text: this.text,
+			  project_id: this.projectId
 			}
 		  })
 		  
@@ -155,7 +162,7 @@
 			  // 跳转到分镜规划页面
 			  setTimeout(() => {
 				uni.navigateTo({
-				  url: `/pages/storyboard/layout-planner?storyboard=${encodeURIComponent(JSON.stringify(response.data.storyboard))}`
+				  url: `/pages/storyboard/layout-planner?project_id=${response.data.project_id}&text_id=${response.data.text_id}`
 				})
 			  }, 1500)
 			} else {

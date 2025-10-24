@@ -9,8 +9,8 @@ import uuid
 
 from .client import db_client
 from .models import (
-    User, Project, SourceText, Character, Storyboard,
-    TableNames, UserFields, ProjectFields, SourceTextFields, CharacterFields,
+    User, Project, SourceText, Character, Storyboard, StoryboardPanel,
+    TableNames, UserFields, ProjectFields, SourceTextFields, CharacterFields, StoryboardFields,
     ProjectVisibility
 )
 
@@ -282,58 +282,143 @@ async def get_source_texts_by_project(project_id: str) -> List[SourceText]:
         return []
 
 
-async def save_storyboard(project_id: str, storyboard: Storyboard) -> bool:
+# ==================== 分镜相关操作 ====================
+
+async def create_storyboard_panel(
+    project_id: str, 
+    source_text_id: str, 
+    panel_index: int, 
+    panel_data: dict, 
+    character_id: Optional[str] = None
+) -> Optional[StoryboardPanel]:
     """
-    保存分镜数据到项目
+    创建一条新的分镜面板记录
     
     Args:
         project_id: 项目ID
-        storyboard: 分镜对象
+        source_text_id: 原文ID
+        panel_index: 面板索引
+        panel_data: 面板数据字典
+        character_id: 角色ID（可选）
         
     Returns:
-        bool: 保存是否成功
+        Optional[StoryboardPanel]: 创建的分镜面板对象或None
     """
     try:
-        # 将分镜数据保存为JSON到项目的描述字段（临时方案）
-        storyboard_json = json.dumps(storyboard.to_dict(), ensure_ascii=False)
-        
-        await db_client.update(
-            TableNames.PROJECTS,
-            {ProjectFields.DESCRIPTION: storyboard_json},
-            {ProjectFields.PROJECT_ID: project_id}
-        )
-        return True
-        
+        storyboard_data = {
+            StoryboardFields.STORYBOARD_ID: str(uuid.uuid4()),
+            StoryboardFields.PROJECT_ID: project_id,
+            StoryboardFields.SOURCE_TEXT_ID: source_text_id,
+            StoryboardFields.PANEL_INDEX: panel_index,
+            StoryboardFields.ORIGINAL_TEXT_SNIPPET: panel_data.get("original_text_snippet"),
+            StoryboardFields.CHARACTER_APPEARANCE: panel_data.get("character_appearance"),
+            StoryboardFields.SCENE_AND_LIGHTING: panel_data.get("scene_and_lighting"),
+            StoryboardFields.CAMERA_AND_COMPOSITION: panel_data.get("camera_and_composition"),
+            StoryboardFields.EXPRESSION_AND_ACTION: panel_data.get("expression_and_action"),
+            StoryboardFields.STYLE_REQUIREMENTS: panel_data.get("style_requirements"),
+            StoryboardFields.CHARACTER_ID: character_id
+        }
+        result = await db_client.insert(TableNames.STORYBOARDS, storyboard_data)
+        if result:
+            return StoryboardPanel.from_dict(result)
+        return None
     except Exception as e:
-        print(f"❌ 保存分镜失败: {e}")
-        return False
+        print(f"❌ 创建分镜面板失败: {e}")
+        return None
 
 
-async def load_storyboard(project_id: str) -> Optional[Storyboard]:
+async def get_storyboards_by_text_id(text_id: str) -> List[StoryboardPanel]:
     """
-    从项目加载分镜数据
+    根据 source_text_id 获取所有分镜面板，按索引排序
     
     Args:
-        project_id: 项目ID
+        text_id: 原文ID
         
     Returns:
-        Optional[Storyboard]: 分镜对象或None
+        List[StoryboardPanel]: 分镜面板列表
     """
     try:
         results = await db_client.select(
-            TableNames.PROJECTS,
-            columns=ProjectFields.DESCRIPTION,
-            filters={ProjectFields.PROJECT_ID: project_id}
+            TableNames.STORYBOARDS,
+            filters={StoryboardFields.SOURCE_TEXT_ID: text_id}
         )
-        
-        if results and results[0].get(ProjectFields.DESCRIPTION):
-            storyboard_data = json.loads(results[0][ProjectFields.DESCRIPTION])
-            return Storyboard.from_dict(storyboard_data)
-        return None
-        
+        # 在Python中排序
+        results.sort(key=lambda x: x.get(StoryboardFields.PANEL_INDEX, 0))
+        return [StoryboardPanel.from_dict(row) for row in results]
     except Exception as e:
-        print(f"❌ 加载分镜失败: {e}")
+        print(f"❌ 获取分镜列表失败: {e}")
+        return []
+
+
+async def update_storyboard_panel(storyboard_id: str, updates: dict) -> bool:
+    """
+    更新单个分镜面板
+    
+    Args:
+        storyboard_id: 分镜面板ID
+        updates: 要更新的字段字典
+        
+    Returns:
+        bool: 更新是否成功
+    """
+    try:
+        # 清理掉主键，防止更新主键
+        if StoryboardFields.STORYBOARD_ID in updates:
+            del updates[StoryboardFields.STORYBOARD_ID]
+        
+        await db_client.update(
+            TableNames.STORYBOARDS,
+            updates,
+            {StoryboardFields.STORYBOARD_ID: storyboard_id}
+        )
+        return True
+    except Exception as e:
+        print(f"❌ 更新分镜面板失败: {e}")
+        return False
+
+
+async def get_storyboard_by_id(storyboard_id: str) -> Optional[StoryboardPanel]:
+    """
+    根据ID获取分镜面板
+    
+    Args:
+        storyboard_id: 分镜面板ID
+        
+    Returns:
+        Optional[StoryboardPanel]: 分镜面板对象或None
+    """
+    try:
+        results = await db_client.select(
+            TableNames.STORYBOARDS,
+            filters={StoryboardFields.STORYBOARD_ID: storyboard_id}
+        )
+        if results:
+            return StoryboardPanel.from_dict(results[0])
         return None
+    except Exception as e:
+        print(f"❌ 获取分镜面板失败: {e}")
+        return None
+
+
+async def delete_storyboard_panel(storyboard_id: str) -> bool:
+    """
+    删除分镜面板
+    
+    Args:
+        storyboard_id: 分镜面板ID
+        
+    Returns:
+        bool: 删除是否成功
+    """
+    try:
+        await db_client.delete(
+            TableNames.STORYBOARDS,
+            {StoryboardFields.STORYBOARD_ID: storyboard_id}
+        )
+        return True
+    except Exception as e:
+        print(f"❌ 删除分镜面板失败: {e}")
+        return False
 
 
 # ==================== 角色相关操作 ====================

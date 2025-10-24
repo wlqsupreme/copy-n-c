@@ -157,16 +157,298 @@ python test_auth.py
 
 
 
+项目感知
+一个项目（Project）的角色基础设定（characters.description）应该是持久化且唯一的。在处理后续章节（source_texts）时，AI 不应该（也不需要）重新生成已存在角色的description，而只应该生成该分镜特有的character_appearance（情景外貌）。
 
-随着功能（如文生图）的增加，把所有逻辑都堆在 `main.py` 中很快会变成一场“灾难”，极难维护和协作。
+你目前的 generate_storyboard_for_segment 函数（如你所示）每次都会让 AI 同时生成 characters 和 storyboards，这会导致角色数据的冗余和覆盖。
 
-您已经成功地将数据库逻辑分离到了 `app/db/` 目录中，这是一个非常棒的开始！
+更好的解决方式：“项目感知”的数据流
+我们不需要在分镜规划前“先确定角色”（这会增加用户负担），而是让AI处理流程变得“项目感知”。
 
-针对您“保持结构简单、便于协作”的需求，我推荐一个既专业又简洁的方案：**将`main.py`拆分为“API路由层”和“AI服务层”**。
+当用户上传一个新章节（source_texts）时，我们的后端 API 应该：
 
-这完全符合您的协作模式：您可以专注于`storyboard`（分镜）相关的服务和API，而您的协作者可以独立开发`image_gen`（图像生成）的服务和API，互不干扰。
+查询：从 characters 表中，获取该 project_id 下所有已存在的角色。
 
------
+注入：将这些“已存在角色”的列表（名称和描述）注入到 AI 的提示词 (Prompt) 中。
+
+指示：
+
+告诉 AI：“这些是本项目已知的角色。在生成分镜时，如果文本提到了他们，请直接使用他们的名字。”
+
+告诉 AI：“如果文本中出现了新角色（不在我给你的列表里），请在 characters 数组中为他们生成新的描述。”
+
+告诉 AI：“对于 storyboards 数组，请始终生成 character_appearance（情景外貌）。”
+
+这样就完美解决了问题：
+
+首次上传（第一章）：existing_characters 列表为空。AI 会解析并返回所有新角色的 description。
+
+后续上传（第二章）：existing_characters 列表包含“李慕白”和“王珂”。AI 在处理第二章时，不会在 characters 数组里再次返回他们，除非第二章出现了新角色“赵长老”。AI 只会专注于生成 storyboards。
+
+
+
+
+
+
+/*
+ Navicat Premium Dump SQL
+
+ Source Server         : n-c
+ Source Server Type    : PostgreSQL
+ Source Server Version : 170006 (170006)
+ Source Host           : aws-1-ap-south-1.pooler.supabase.com:5432
+ Source Catalog        : postgres
+ Source Schema         : public
+
+ Target Server Type    : PostgreSQL
+ Target Server Version : 170006 (170006)
+ File Encoding         : 65001
+
+ Date: 24/10/2025 10:39:27
+*/
+
+
+-- ----------------------------
+-- Table structure for characters
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."characters";
+CREATE TABLE "public"."characters" (
+  "character_id" uuid NOT NULL DEFAULT gen_random_uuid(),
+  "project_id" uuid NOT NULL,
+  "name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "description" text COLLATE "pg_catalog"."default",
+  "reference_image_urls" json,
+  "lora_model_path" varchar(1024) COLLATE "pg_catalog"."default",
+  "trigger_word" varchar(100) COLLATE "pg_catalog"."default"
+)
+;
+COMMENT ON COLUMN "public"."characters"."character_id" IS '唯一角色ID (UUID)';
+COMMENT ON COLUMN "public"."characters"."project_id" IS '外键，关联到 projects(project_id)';
+COMMENT ON COLUMN "public"."characters"."name" IS '角色名称 (例如 "张三")';
+COMMENT ON COLUMN "public"."characters"."description" IS '【角色外貌、性格描述】的详细描述 (例如：年龄, 性别, 身高, 体型, 发型, 发色, 眼睛, 穿着, 特殊配饰)(供大语言模型使用)';
+COMMENT ON COLUMN "public"."characters"."reference_image_urls" IS '角色参考图URL列表 (JSON数组格式, 存储S3/OSS的对象存储URL)';
+COMMENT ON COLUMN "public"."characters"."lora_model_path" IS '指向 S3/OSS 上的LoRA模型或Embedding文件路径 (例如 /models/lora/xxx.safetensors)';
+COMMENT ON COLUMN "public"."characters"."trigger_word" IS '触发该LoRA的关键词 (例如 "ohwx_zhangsan")';
+COMMENT ON TABLE "public"."characters" IS '项目角色表';
+
+-- ----------------------------
+-- Records of characters
+-- ----------------------------
+INSERT INTO "public"."characters" VALUES ('c0a1b2c3-1111-4f5e-8d9c-0a2a3a4a5b01', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', '李慕白', '年龄17岁, 男性, 身高178cm, 身材修长, 黑色长发束成马尾, 黑色眼眸犀利, 穿着朴素的蓝色武道袍, 背着一个竹制背包和一把剑', '["https://cdn.example.com/ref/limubai_ref1.png"]', '/models/lora/project_a_limubai.safetensors', 'ohwx_limubai');
+INSERT INTO "public"."characters" VALUES ('c0a1b2c3-2222-4f5e-8d9c-0a2a3a4a5b02', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', '王珂', '年龄22岁, 女性, 身高165cm, 中等身材, 凌乱的黑色短发, 惊恐的大眼睛, 穿着宽大的T恤和短裤, 没有配饰', '["https://cdn.example.com/ref/wangke_ref1.png"]', '/models/lora/project_b_wangke.safetensors', 'ohwx_wangke');
+
+-- ----------------------------
+-- Table structure for projects
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."projects";
+CREATE TABLE "public"."projects" (
+  "project_id" uuid NOT NULL DEFAULT gen_random_uuid(),
+  "user_id" uuid NOT NULL,
+  "title" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "description" text COLLATE "pg_catalog"."default",
+  "visibility" "public"."project_visibility" DEFAULT 'private'::project_visibility,
+  "default_style_prompt" text COLLATE "pg_catalog"."default",
+  "created_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
+  "updated_at" timestamptz(6) DEFAULT timezone('utc'::text, now())
+)
+;
+COMMENT ON COLUMN "public"."projects"."project_id" IS '唯一项目ID (UUID)';
+COMMENT ON COLUMN "public"."projects"."user_id" IS '外键，关联到 users(user_id)，表示该项目的所有者';
+COMMENT ON COLUMN "public"."projects"."title" IS '项目标题 (例如 "我的XX小说改编")';
+COMMENT ON COLUMN "public"."projects"."description" IS '项目描述';
+COMMENT ON COLUMN "public"."projects"."visibility" IS '可见性：private(仅自己), public(他人可见)';
+COMMENT ON COLUMN "public"."projects"."default_style_prompt" IS '项目的默认风格提示词 (例如 "shonen manga, high contrast")';
+COMMENT ON COLUMN "public"."projects"."created_at" IS '项目创建时间';
+COMMENT ON COLUMN "public"."projects"."updated_at" IS '项目最后更新时间';
+COMMENT ON TABLE "public"."projects" IS '漫画项目表';
+
+-- ----------------------------
+-- Records of projects
+-- ----------------------------
+INSERT INTO "public"."projects" VALUES ('f47ac10b-58cc-4372-a567-0e02b2c3d479', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '仙尘', '一部关于凡人修仙的小说改编项目', 'private', 'manga, black-and-white screentone, clean lineart, chinese ink style', '2025-10-23 17:55:37.636342+00', '2025-10-23 17:55:37.636342+00');
+INSERT INTO "public"."projects" VALUES ('f47ac10b-58cc-4372-a567-0e02b2c3d480', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', '都市夜归人', '现代都市背景下的奇幻故事', 'public', 'webtoon, full color, high clarity, dynamic actionpose', '2025-10-23 17:55:37.636342+00', '2025-10-23 17:55:37.636342+00');
+INSERT INTO "public"."projects" VALUES ('b7c63fe9-7c25-4122-bf59-0e9fcf34d4a6', '19602e5a-7e68-4e91-8b67-ee27d2f29bd5', '测试项目', '这是一个测试项目', 'private', NULL, '2025-10-24 01:37:31.277426+00', '2025-10-24 01:37:31.277426+00');
+
+-- ----------------------------
+-- Table structure for source_texts
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."source_texts";
+CREATE TABLE "public"."source_texts" (
+  "text_id" uuid NOT NULL DEFAULT gen_random_uuid(),
+  "project_id" uuid NOT NULL,
+  "title" varchar(255) COLLATE "pg_catalog"."default" DEFAULT 'Untitled Chapter'::character varying,
+  "raw_content" text COLLATE "pg_catalog"."default" NOT NULL,
+  "order_index" int4 DEFAULT 0,
+  "created_at" timestamptz(6) DEFAULT timezone('utc'::text, now())
+)
+;
+COMMENT ON COLUMN "public"."source_texts"."text_id" IS '唯一文本ID (UUID)';
+COMMENT ON COLUMN "public"."source_texts"."project_id" IS '外键，关联到 projects(project_id)';
+COMMENT ON COLUMN "public"."source_texts"."title" IS '标题 (例如 "第一章" 或 "番外篇")';
+COMMENT ON COLUMN "public"."source_texts"."raw_content" IS '存储用户上传的原始小说文本 (PostgreSQL的TEXT类型已足够)';
+COMMENT ON COLUMN "public"."source_texts"."order_index" IS '用于章节或文本片段的排序';
+COMMENT ON COLUMN "public"."source_texts"."created_at" IS '上传时间';
+COMMENT ON TABLE "public"."source_texts" IS '小说原文表';
+
+-- ----------------------------
+-- Records of source_texts
+-- ----------------------------
+INSERT INTO "public"."source_texts" VALUES ('d1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2c', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', '第一章：下山', '清晨，雾气尚未散去，少年李慕白背着行囊，最后看了一眼山顶的茅屋，毅然转身下山。他不知道，此行将改变他的一生。', 0, '2025-10-23 17:55:37.857842+00');
+INSERT INTO "public"."source_texts" VALUES ('d1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2d', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', '序章：雨夜', '冰冷的雨水拍打在陈旧的窗户上。王珂缩在角落，借着闪电的光芒，她看到那个黑影又一次出现在了巷口。', 0, '2025-10-23 17:55:37.857842+00');
+
+-- ----------------------------
+-- Table structure for storyboards
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."storyboards";
+CREATE TABLE "public"."storyboards" (
+  "storyboard_id" uuid NOT NULL DEFAULT gen_random_uuid(),
+  "project_id" uuid NOT NULL,
+  "source_text_id" uuid NOT NULL,
+  "panel_index" int4 NOT NULL DEFAULT 0,
+  "original_text_snippet" text COLLATE "pg_catalog"."default",
+  "character_appearance" text COLLATE "pg_catalog"."default",
+  "scene_and_lighting" text COLLATE "pg_catalog"."default",
+  "camera_and_composition" text COLLATE "pg_catalog"."default",
+  "expression_and_action" text COLLATE "pg_catalog"."default",
+  "style_requirements" text COLLATE "pg_catalog"."default",
+  "generated_image_url" varchar(1024) COLLATE "pg_catalog"."default",
+  "created_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
+  "updated_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
+  "character_id" uuid
+)
+;
+COMMENT ON COLUMN "public"."storyboards"."storyboard_id" IS '唯一分镜ID (UUID)';
+COMMENT ON COLUMN "public"."storyboards"."project_id" IS '外键，关联到 projects(project_id)，用于快速索引项目下的所有分镜';
+COMMENT ON COLUMN "public"."storyboards"."source_text_id" IS '外键，关联到 source_texts(text_id)，标识该分镜属于哪一章小说';
+COMMENT ON COLUMN "public"."storyboards"."panel_index" IS '分镜在章节内的排序索引 (例如 0, 1, 2, ...)，用于排序';
+COMMENT ON COLUMN "public"."storyboards"."original_text_snippet" IS '该分镜对应的原始小说文本片段 (方便用户对照)';
+COMMENT ON COLUMN "public"."storyboards"."character_appearance" IS '【角色外貌】的详细描述 (例如：年龄, 性别, 身高, 体型, 发型, 发色, 眼睛, 穿着, 特殊配饰)';
+COMMENT ON COLUMN "public"."storyboards"."scene_and_lighting" IS '【场景与光照】的详细描述 (例如：地点, 时间, 天气, 光源, 氛围)';
+COMMENT ON COLUMN "public"."storyboards"."camera_and_composition" IS '【镜头与构图】的详细描述 (例如：镜头景别(特写/中景/全景), 角度(正面/四分之三/低角度/高角度), 聚焦于角色, 动态姿势)';
+COMMENT ON COLUMN "public"."storyboards"."expression_and_action" IS '【表情与动作】的详细描述 (例如：情绪, 面部表情, 手势, 动作)';
+COMMENT ON COLUMN "public"."storyboards"."style_requirements" IS '【风格要求】的详细描述 (例如：漫画, 黑白网点, 清晰线条, 分镜构图, 高清晰度, 详细背景, 角色设计一致性)';
+COMMENT ON COLUMN "public"."storyboards"."generated_image_url" IS 'AIGC生成的漫画图片存放地址 (URL或对象存储路径)';
+COMMENT ON COLUMN "public"."storyboards"."created_at" IS '分镜创建时间';
+COMMENT ON COLUMN "public"."storyboards"."updated_at" IS '分镜最后更新时间';
+COMMENT ON COLUMN "public"."storyboards"."character_id" IS '外键，关联到 characters(character_id)，标识该分镜的主要角色 (允许为空)';
+COMMENT ON TABLE "public"."storyboards" IS '分镜规划表 (存储每个单独的漫画分格)';
+
+-- ----------------------------
+-- Records of storyboards
+-- ----------------------------
+INSERT INTO "public"."storyboards" VALUES ('e5a8a6f0-1b3a-4f5e-8d9c-0a2a3a4a5b61', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 'd1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2c', 0, '清晨，雾气尚未散去，少年李慕白背着行囊...', '年龄17岁, 男性, 身高178cm, 身材修长, 黑色长发束成马尾, 黑色眼眸犀利, 穿着朴素的蓝色武道袍, 背着一个竹制背包和一把剑', '山路, 清晨, 浓雾, 太阳刚升起(漫射光源), 安静且雾气缭绕的氛围', '中景镜头, 从背后呈四分之三角度, 聚焦于角色回望山顶', '怀旧, 依依不舍, 扭头回望, 静止站立', '漫画风格, 黑白网点, 清晰的线条, 详细的背景(山脉和雾气)', 'https://cdn.example.com/img/project_a_t1_p0.png', '2025-10-23 17:55:38.092062+00', '2025-10-24 02:19:27.170158+00', 'c0a1b2c3-1111-4f5e-8d9c-0a2a3a4a5b01');
+INSERT INTO "public"."storyboards" VALUES ('e5a8a6f0-1b3a-4f5e-8d9c-0a2a3a4a5b62', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 'd1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2c', 1, '...毅然转身下山。他不知道，此行将改变他的一生。', '年龄17岁, 男性, 身高178cm, 身材修长, 黑色长发束成马尾, 黑色眼眸犀利, 穿着朴素的蓝色武道袍, 背着一个竹制背包和一把剑', '山路, 清晨, 浓雾, 太阳刚升起(漫射光源), 安静且雾气缭绕的氛围', '全景镜头, 正面角度, 聚焦于角色向前走(朝向镜头), 动态姿势(行走中)', '坚定, 坚决, 表情严肃, 自信地大步向前', '漫画风格, 黑白网点, 清晰的线条, 强调动态的分镜构图', 'https://cdn.example.com/img/project_a_t1_p1.png', '2025-10-23 17:55:38.092062+00', '2025-10-24 02:19:27.452626+00', 'c0a1b2c3-1111-4f5e-8d9c-0a2a3a4a5b01');
+INSERT INTO "public"."storyboards" VALUES ('e5a8a6f0-1b3a-4f5e-8d9c-0a2a3a4a5b63', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', 'd1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2d', 0, '王珂缩在角落，借着闪电的光芒，她看到那个黑影又一次出现在了巷口。', '年龄22岁, 女性, 身高165cm, 中等身材, 凌乱的黑色短发, 惊恐的大眼睛, 穿着宽大的T恤和短裤, 没有配饰', '黑暗的公寓房间内, 夜晚, 雷雨, 主要光源是窗外短暂刺眼的闪电, 高对比度, 紧张的氛围', '特写镜头, 低角度(仰视角色), 聚焦于角色的脸部', '恐惧, 惊恐万分, 睁大眼睛, 用手捂住嘴巴, 蜷缩在角落', '条漫风格, 全彩, 高清晰度, 戏剧性的光照, 专注于情绪表达', 'https://cdn.example.com/img/project_b_t1_p0.png', '2025-10-23 17:55:38.092062+00', '2025-10-24 02:19:27.720621+00', 'c0a1b2c3-2222-4f5e-8d9c-0a2a3a4a5b02');
+
+-- ----------------------------
+-- Table structure for users
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."users";
+CREATE TABLE "public"."users" (
+  "user_id" uuid NOT NULL DEFAULT gen_random_uuid(),
+  "username" varchar(100) COLLATE "pg_catalog"."default" NOT NULL,
+  "email" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "hashed_password" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "credit_balance" int4 DEFAULT 0,
+  "created_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
+  "updated_at" timestamptz(6) DEFAULT timezone('utc'::text, now())
+)
+;
+COMMENT ON COLUMN "public"."users"."user_id" IS '唯一用户ID (UUID)';
+COMMENT ON COLUMN "public"."users"."username" IS '用户名 (用于登录，必须唯一)';
+COMMENT ON COLUMN "public"."users"."email" IS '电子邮箱 (用于登录或找回密码，必须唯一)';
+COMMENT ON COLUMN "public"."users"."hashed_password" IS '加密后的密码 (例如使用bcrypt或Argon2)';
+COMMENT ON COLUMN "public"."users"."credit_balance" IS '可使用额度 (例如: 剩余可生成图片张数或Token数)';
+COMMENT ON COLUMN "public"."users"."created_at" IS '账户创建时间';
+COMMENT ON COLUMN "public"."users"."updated_at" IS '账户信息最后更新时间';
+COMMENT ON TABLE "public"."users" IS '用户信息表';
+
+-- ----------------------------
+-- Records of users
+-- ----------------------------
+INSERT INTO "public"."users" VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'user_A', 'user_a@example.com', '$2b$12$dummyhashplaceholder1', 100, '2025-10-23 17:55:37.406081+00', '2025-10-23 17:55:37.406081+00');
+INSERT INTO "public"."users" VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'user_B', 'user_b@example.com', '$2b$12$dummyhashplaceholder2', 50, '2025-10-23 17:55:37.406081+00', '2025-10-23 17:55:37.406081+00');
+INSERT INTO "public"."users" VALUES ('19602e5a-7e68-4e91-8b67-ee27d2f29bd5', 'test_user_1864', 'test_user_1864@example.com', 'test_password_hash', 0, '2025-10-24 01:37:30.692544+00', '2025-10-24 01:37:30.692544+00');
+INSERT INTO "public"."users" VALUES ('5cfa3d74-920b-4f57-9ad2-f02838b56c22', 'test_user_create', 'test_create@example.com', '$2b$12$Tew/dJ9.gg7waD9Bv.XV8us1PvcDl3jbym96kBJzw.kFUqUXnFhWe', 0, '2025-10-24 01:39:16.413759+00', '2025-10-24 01:39:16.413759+00');
+
+-- ----------------------------
+-- Primary Key structure for table characters
+-- ----------------------------
+ALTER TABLE "public"."characters" ADD CONSTRAINT "characters_pkey" PRIMARY KEY ("character_id");
+
+-- ----------------------------
+-- Triggers structure for table projects
+-- ----------------------------
+CREATE TRIGGER "set_projects_updated_at" BEFORE UPDATE ON "public"."projects"
+FOR EACH ROW
+EXECUTE PROCEDURE "public"."trigger_set_timestamp"();
+
+-- ----------------------------
+-- Primary Key structure for table projects
+-- ----------------------------
+ALTER TABLE "public"."projects" ADD CONSTRAINT "projects_pkey" PRIMARY KEY ("project_id");
+
+-- ----------------------------
+-- Primary Key structure for table source_texts
+-- ----------------------------
+ALTER TABLE "public"."source_texts" ADD CONSTRAINT "source_texts_pkey" PRIMARY KEY ("text_id");
+
+-- ----------------------------
+-- Triggers structure for table storyboards
+-- ----------------------------
+CREATE TRIGGER "set_storyboards_updated_at" BEFORE UPDATE ON "public"."storyboards"
+FOR EACH ROW
+EXECUTE PROCEDURE "public"."trigger_set_timestamp"();
+
+-- ----------------------------
+-- Primary Key structure for table storyboards
+-- ----------------------------
+ALTER TABLE "public"."storyboards" ADD CONSTRAINT "storyboards_pkey" PRIMARY KEY ("storyboard_id");
+
+-- ----------------------------
+-- Triggers structure for table users
+-- ----------------------------
+CREATE TRIGGER "set_users_updated_at" BEFORE UPDATE ON "public"."users"
+FOR EACH ROW
+EXECUTE PROCEDURE "public"."trigger_set_timestamp"();
+
+-- ----------------------------
+-- Uniques structure for table users
+-- ----------------------------
+ALTER TABLE "public"."users" ADD CONSTRAINT "users_username_key" UNIQUE ("username");
+ALTER TABLE "public"."users" ADD CONSTRAINT "users_email_key" UNIQUE ("email");
+
+-- ----------------------------
+-- Primary Key structure for table users
+-- ----------------------------
+ALTER TABLE "public"."users" ADD CONSTRAINT "users_pkey" PRIMARY KEY ("user_id");
+
+-- ----------------------------
+-- Foreign Keys structure for table characters
+-- ----------------------------
+ALTER TABLE "public"."characters" ADD CONSTRAINT "characters_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."projects" ("project_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- ----------------------------
+-- Foreign Keys structure for table projects
+-- ----------------------------
+ALTER TABLE "public"."projects" ADD CONSTRAINT "projects_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users" ("user_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- ----------------------------
+-- Foreign Keys structure for table source_texts
+-- ----------------------------
+ALTER TABLE "public"."source_texts" ADD CONSTRAINT "source_texts_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."projects" ("project_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+-- ----------------------------
+-- Foreign Keys structure for table storyboards
+-- ----------------------------
+ALTER TABLE "public"."storyboards" ADD CONSTRAINT "storyboards_character_id_fkey" FOREIGN KEY ("character_id") REFERENCES "public"."characters" ("character_id") ON DELETE SET NULL ON UPDATE NO ACTION;
+ALTER TABLE "public"."storyboards" ADD CONSTRAINT "storyboards_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."projects" ("project_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+ALTER TABLE "public"."storyboards" ADD CONSTRAINT "storyboards_source_text_id_fkey" FOREIGN KEY ("source_text_id") REFERENCES "public"."source_texts" ("text_id") ON DELETE CASCADE ON UPDATE NO ACTION;
+
+
+
+
+
 
 # 新的目录结构说明 - 项目重构完成
 
@@ -311,3 +593,399 @@ uvicorn app.main:app --reload  # 启动API服务
 4. **优化错误处理和日志记录**
 
 重构完成！现在代码结构更加清晰，便于维护和协作开发。
+
+
+
+
+我们现在的核心任务就是打通“**前端输入 -\> 后端AI处理 -\> 数据持久化 -\> 前端加载&编辑**”这个闭环。
+
+以下是我们需要修改的文件及其职责，以及清晰的数据流转说明。
+
+-----
+
+### 目标数据流（修复后）
+
+1.  **前端 (文本分析页)**: 用户在 `script-analyzer.vue` 页面（此时已登录并选定了`project_id`）输入小说文本，点击“生成分镜”。
+2.  **前端 (API调用)**: `submitText()` 方法调用后端 `POST /api/v1/parse` 接口，**必须**携带 `{ text, title, project_id }`。
+3.  **后端 (API层)**: `backend/app/api/storyboard.py` 中的 `parse_text` 接口接收请求。
+4.  **后端 (存原文)**: `parse_text` **首先**调用 `crud.py` 中的 `create_source_text()`，将小说原文存入 `source_texts` 表，并获得一个`text_id`。
+5.  **后端 (AI处理)**: `parse_text` 调用 `backend/app/services/ai_parser.py`。
+6.  **后端 (AI服务层)**: `ai_parser.py` **(需修改)** 调用LLM，要求AI返回一个包含`"characters": [...]`和`"storyboards": [...]`的JSON。
+7.  **后端 (存AI数据)**: `parse_text` 收到AI的JSON后：
+      * 遍历`characters`列表，调用 `crud.py` 的 `create_character()` 存入 `characters` 表。
+      * 遍历`storyboards`列表，调用 `crud.py` 的 **`create_storyboard_panel()`** (新函数) 存入 `storyboards` 表（并关联`project_id`, `text_id`, `character_id`）。
+8.  **后端 (API响应)**: `parse_text` **不再返回**庞大的JSON数据，而是返回 `{ "ok": true, "project_id": "...", "text_id": "..." }`。
+9.  **前端 (跳转)**: `script-analyzer.vue` 收到成功的响应后，**使用ID跳转**到分镜规划页：`uni.navigateTo({ url: \`/pages/storyboard/layout-planner?project\_id=...\&text\_id=...\` })\`。
+10. **前端 (分镜页)**: `layout-planner.vue` 在 `onLoad` 时获取 `text_id`。
+11. **前端 (加载数据)**: `layout-planner.vue` 调用**新的** `GET /api/v1/storyboards?text_id=...` 接口从数据库获取该章节的所有分镜数据。
+12. **前端 (编辑&保存)**: 用户在 `layout-planner.vue` 修改*单个*分镜面板后，点击保存，调用**新的** `PUT /api/v1/storyboard/{storyboard_id}` 接口，仅更新该条数据。
+
+-----
+
+1. 用户上传新章节 → POST /api/v1/parse
+2. 保存原文 → source_texts表
+3. 查询项目已存在角色 → characters表
+4. 将已存在角色列表传递给AI
+5. AI处理文本，只生成新角色的description
+6. AI为所有角色生成character_appearance
+7. 后端只创建新角色，跳过已存在角色
+8. 保存分镜，正确关联角色ID
+
+
+
+
+
+### 1\. 模型(LLM)需要处理和输入的数据
+
+你问到了模型需要处理哪些数据，这非常关键。你需要修改AI的提示词（Prompt），让它输出*同时*符合`characters`表和`storyboards`表结构的JSON。
+
+**文件**: `backend/app/services/ai_parser.py`
+
+**LLM (AI) 的输出JSON格式（建议）：**
+
+```json
+{
+  "characters": [
+    {
+      "name": "李慕白",
+      "description": "年龄17岁, 男性, 身高178cm, 身材修长, 黑色长发束成马尾, 黑色眼眸犀利, 穿着朴素的蓝色武道袍, 背着一个竹制背包和一把剑"
+    },
+    {
+      "name": "王珂", 
+      "description": "年龄22岁, 女性, 身高165cm, 中等身材, 凌乱的黑色短发..."
+    }
+  ],
+  "storyboards": [
+    {
+      "original_text_snippet": "清晨，雾气尚未散去，少年李慕白背着行囊...",
+      "character_name": "李慕白", // AI需要提供这个名字，供后端匹配ID
+      "character_appearance": "李慕白穿着朴素的蓝色武道袍, 背着背包和剑", // 分镜特定的外貌（可能与基础设定不同，例如“衣服破损”）
+      "scene_and_lighting": "山路, 清晨, 浓雾, 太阳刚升起(漫射光源), 安静且雾气缭绕的氛围",
+      "camera_and_composition": "中景镜头, 从背后呈四分之三角度, 聚焦于角色回望山顶",
+      "expression_and_action": "怀旧, 依依不舍, 扭头回望, 静止站立",
+      "style_requirements": "漫画风格, 黑白网点, 清晰的线条"
+    },
+    {
+      "original_text_snippet": "王珂缩在角落，借着闪电的光芒...",
+      "character_name": "王珂", // AI提供名字
+      "character_appearance": "王珂穿着宽大的T恤和短裤, 惊恐万分",
+      "scene_and_lighting": "黑暗的公寓房间内, 夜晚, 雷雨, 闪电",
+      "camera_and_composition": "特写镜头, 低角度(仰视角色), 聚焦于角色的脸部",
+      "expression_and_action": "恐惧, 睁大眼睛, 用手捂住嘴巴, 蜷缩",
+      "style_requirements": "条漫风格, 全彩, 戏剧性的光照"
+    }
+  ]
+}
+```
+
+-----
+
+### 2\. 项目中需要修改的文件
+
+以下是你需要重点修改的文件，以便用Cursor实现上述数据流：
+
+#### 后端 (Backend)
+
+**1. `backend/app/db/crud.py`**
+
+  * **职责**: 实际执行数据库操作。
+  * **修改**:
+      * **删除/弃用**: `save_storyboard` 和 `load_storyboard`。这两个函数目前错误地读写 `projects.description` 字段，必须停用。
+      * **[新增函数] `create_storyboard_panel`**:
+        ```python
+        # (你需要添加这个新函数)
+        async def create_storyboard_panel(
+            project_id: str, 
+            source_text_id: str, 
+            panel_index: int, 
+            panel_data: dict, 
+            character_id: Optional[str] = None
+        ) -> Optional[dict]:
+            """创建一条新的分镜面板记录"""
+            try:
+                storyboard_data = {
+                    "storyboard_id": str(uuid.uuid4()),
+                    "project_id": project_id,
+                    "source_text_id": source_text_id,
+                    "panel_index": panel_index,
+                    "original_text_snippet": panel_data.get("original_text_snippet"),
+                    "character_appearance": panel_data.get("character_appearance"),
+                    "scene_and_lighting": panel_data.get("scene_and_lighting"),
+                    "camera_and_composition": panel_data.get("camera_and_composition"),
+                    "expression_and_action": panel_data.get("expression_and_action"),
+                    "style_requirements": panel_data.get("style_requirements"),
+                    "character_id": character_id
+                }
+                result = await db_client.insert("storyboards", storyboard_data)
+                return result
+            except Exception as e:
+                print(f"❌ 创建分镜面板失败: {e}")
+                return None
+        ```
+      * **[新增函数] `get_storyboards_by_text_id`**:
+        ```python
+        # (你需要添加这个新函数)
+        async def get_storyboards_by_text_id(text_id: str) -> List[dict]:
+            """根据 source_text_id 获取所有分镜面板，按索引排序"""
+            try:
+                # Supabase/PostgREST的 .order() 需要在 client.py 中支持，
+                # 如果 client.py 不支持 order，一个简单的 select 也可以，后续在Python中排序
+                # 假设 client.py 的 select 支持 order (如果不支持，就需要修改 client.py)
+                # 
+                # 临时的简单实现 (如果 client.py 不支持排序):
+                results = await db_client.select(
+                    "storyboards",
+                    filters={"source_text_id": text_id}
+                )
+                # 在Python中排序
+                results.sort(key=lambda x: x.get('panel_index', 0))
+                return results
+            except Exception as e:
+                print(f"❌ 获取分镜列表失败: {e}")
+                return []
+        ```
+      * **[新增函数] `update_storyboard_panel`**:
+        ```python
+        # (你需要添加这个新函数)
+        async def update_storyboard_panel(storyboard_id: str, updates: dict) -> bool:
+            """更新单个分镜面板"""
+            try:
+                # 清理掉主键，防止更新主键
+                if "storyboard_id" in updates:
+                    del updates["storyboard_id"]
+                
+                await db_client.update(
+                    "storyboards",
+                    updates,
+                    {"storyboard_id": storyboard_id}
+                )
+                return True
+            except Exception as e:
+                print(f"❌ 更新分镜面板失败: {e}")
+                return False
+        ```
+
+**2. `backend/app/services/ai_parser.py`**
+
+  * **职责**: 调用 LLM 并返回标准 JSON。
+  * **修改**:
+      * **`generate_storyboard_for_segment`**: 修改此函数中的 `messages` (Prompt)，要求AI严格按照我上面提供的 **"LLM (AI) 的输出JSON格式（建议）"** 返回数据（包含`characters`和`storyboards`列表）。
+      * **`call_qiniu_api`**: 确保它能正确解析LLM返回的JSON。
+
+**3. `backend/app/api/storyboard.py`**
+
+  * **职责**: 暴露 HTTP 接口给前端。
+  * **修改**:
+      * **`parse_text` (POST `/api/v1/parse`)**:
+        1.  确保已导入 `create_source_text`, `create_character`, `create_storyboard_panel`。
+        2.  **(新增)** 调用 `create_source_text` 保存原文，获取 `text_id`。
+        3.  调用 `ai_parser.py` 获取AI的JSON（`{"characters": ..., "storyboards": ...}`）。
+        4.  **(新增)** 创建一个字典 `name_to_id_map = {}`。
+        5.  **(新增)** 遍历 `response['characters']`：
+              * 调用 `create_character` 保存角色。
+              * 将返回的 `character_id` 存入 `name_to_id_map[char['name']] = new_char_id`。
+        6.  **(修改)** 替换掉旧的 `save_storyboard` 逻辑。
+        7.  **(新增)** 遍历 `response['storyboards']` (带 `i` 索引)：
+              * `char_name = panel.get("character_name")`
+              * `char_id = name_to_id_map.get(char_name)` (如果找不到就是 `None`)
+              * 调用 `create_storyboard_panel(project_id=req.project_id, source_text_id=text_id, panel_index=i, panel_data=panel, character_id=char_id)`。
+        8.  **(修改)** `return` 语句：必须返回 `{"ok": True, "project_id": req.project_id, "text_id": text_id}`。
+      * **`save_storyboard_endpoint` (POST `/api/v1/save-storyboard`)**:
+          * 这个接口的逻辑是错的（保存到`projects`表），建议**删除**。
+      * **[新增API] `get_storyboards` (GET `/api/v1/storyboards`)**:
+        ```python
+        # (你需要添加这个新API)
+        from fastapi import Query
+
+        @router.get("/api/v1/storyboards", tags=["Storyboard"])
+        async def get_storyboards(text_id: str = Query(...)):
+            """根据 text_id 获取分镜面板列表"""
+            if not db_client.is_connected:
+                raise HTTPException(status_code=500, detail="数据库未连接")
+            try:
+                panels = await get_storyboards_by_text_id(text_id)
+                return {"ok": True, "storyboards": panels}
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"获取分镜失败: {str(e)}")
+        ```
+      * **[新增API] `update_storyboard` (PUT `/api/v1/storyboard/{storyboard_id}`)**:
+        ```python
+        # (你需要添加这个新API)
+        from pydantic import BaseModel
+
+        class StoryboardPanelUpdate(BaseModel):
+            # 定义允许前端修改的字段
+            original_text_snippet: Optional[str] = None
+            character_appearance: Optional[str] = None
+            scene_and_lighting: Optional[str] = None
+            camera_and_composition: Optional[str] = None
+            expression_and_action: Optional[str] = None
+            style_requirements: Optional[str] = None
+            character_id: Optional[str] = None
+
+        @router.put("/api/v1/storyboard/{storyboard_id}", tags=["Storyboard"])
+        async def update_storyboard(storyboard_id: str, updates: StoryboardPanelUpdate):
+            """更新单个分镜面板"""
+            if not db_client.is_connected:
+                raise HTTPException(status_code=500, detail="数据库未连接")
+            try:
+                # .dict(exclude_unset=True) 确保只更新传入的字段
+                success = await update_storyboard_panel(storyboard_id, updates.dict(exclude_unset=True))
+                if success:
+                    return {"ok": True, "message": "更新成功"}
+                else:
+                    raise HTTPException(status_code=500, detail="更新失败")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"更新失败: {str(e)}")
+        ```
+
+-----
+
+#### 前端 (Frontend)
+
+**1. `frontend/pages/storyboard/script-analyzer.vue`**
+
+  * **职责**: 收集文本，调用解析API，然后跳转。
+  * **修改**:
+      * `data()`: 确保 `project_id` 可以从 `onLoad` (如果从项目列表页跳转过来) 或 `authManager` (如果存在) 中获取。
+      * `submitText()`:
+          * 修改 `uni.request` 的 `data`，**必须**包含 `project_id: this.project_id`。
+          * 修改 `success` 回调中的跳转逻辑：
+            ```javascript
+            // [旧代码]
+            // uni.navigateTo({
+            //   url: `/pages/storyboard/layout-planner?storyboard=${encodeURIComponent(JSON.stringify(response.data.storyboard))}`
+            // })
+
+            // [新代码]
+            if (response.data.ok) {
+              uni.showToast({ title: '生成成功！准备跳转...', icon: 'success' });
+              setTimeout(() => {
+                uni.navigateTo({
+                  url: `/pages/storyboard/layout-planner?project_id=${response.data.project_id}&text_id=${response.data.text_id}`
+                })
+              }, 1500)
+            } else {
+              // 处理错误
+            }
+            ```
+
+**2. `frontend/pages/storyboard/layout-planner.vue`**
+
+  * **职责**: (关键页面) 加载、显示、编辑分镜面板。
+  * **修改 (这块改动最大)**:
+      * `data()`:
+          * `pages: []` -\> **`panels: []`** (数据结构必须改变，以匹配数据库)。
+          * `projectId: null` (保留)。
+          * **(新增)** `textId: null`。
+      * `onLoad(options)`:
+          * **删除** `options.storyboard` 的所有相关逻辑。
+          * **替换** `loadExistingStoryboard` 的逻辑。
+          * **(新增)**
+            ```javascript
+            onLoad(options) {
+              if (options.project_id && options.text_id) {
+                this.projectId = options.project_id;
+                this.textId = options.text_id;
+                this.loadPanelsData(); // 调用新的加载函数
+              } else {
+                uni.showToast({ title: '缺少项目或文本ID', icon: 'none' });
+                // ...返回逻辑
+              }
+            }
+            ```
+      * **[新增方法] `loadPanelsData`**:
+        ```javascript
+        async loadPanelsData() {
+          this.isLoading = true;
+          uni.showLoading({ title: '加载分镜中...' });
+          try {
+            const response = await uni.request({
+              url: `http://localhost:8000/api/v1/storyboards?text_id=${this.textId}`,
+              method: 'GET'
+            });
+            if (response.statusCode === 200 && response.data.ok) {
+              this.panels = response.data.storyboards; // 将数据存入 panels
+              this.hasUnsavedChanges = false;
+            } else {
+              throw new Error('加载失败');
+            }
+          } catch (e) {
+            uni.showToast({ title: e.message || '加载数据失败', icon: 'none' });
+          } finally {
+            this.isLoading = false;
+            uni.hideLoading();
+          }
+        }
+        ```
+      * **Template (HTML部分)**:
+          * 你必须**重构**模板。删除 `v-for="(page, pageIndex) in pages"` 的外层循环。
+          * **替换**为一层循环： `v-for="(panel, panelIndex) in panels" :key="panel.storyboard_id"`。
+          * 模板中所有对 `page.panels` 的引用都应改为 `panel`。
+      * `editPanel(pageIndex, panelIndex)` -\> `editPanel(panelIndex)`:
+          * `const panel = this.panels[panelIndex]`
+          * `this.editingPanelIndex = panelIndex`
+          * `(重要)` `this.editingPanel = { ...panel }` (复制所有字段，包括`storyboard_id`)。
+      * `savePanel()` (保存单个面板的弹窗):
+          * **(重要)** 这是你说的“允许用户修改”的核心。
+          * 调用新的 `PUT` 接口：
+            ```javascript
+            async savePanel() {
+              const panelToSave = this.editingPanel;
+              const panelId = panelToSave.storyboard_id;
+              
+              // (...前端验证...)
+              
+              // 从 editingPanel 中提取需要更新的字段
+              const updates = {
+                original_text_snippet: panelToSave.original_text_snippet,
+                character_appearance: panelToSave.character_appearance,
+                scene_and_lighting: panelToSave.scene_and_lighting,
+                camera_and_composition: panelToSave.camera_and_composition,
+                expression_and_action: panelToSave.expression_and_action,
+                style_requirements: panelToSave.style_requirements
+                // 注意：这里也应该允许修改 character_id，但这需要一个下拉框
+              };
+
+              try {
+                const response = await uni.request({
+                  url: `http://localhost:8000/api/v1/storyboard/${panelId}`,
+                  method: 'PUT',
+                  data: updates
+                });
+                
+                if (response.statusCode === 200 && response.data.ok) {
+                  // 更新本地数据
+                  this.panels[this.editingPanelIndex] = { ...panelToSave };
+                  uni.showToast({ title: '保存成功', icon: 'success' });
+                  this.closeModal();
+                } else {
+                  throw new Error('保存失败');
+                }
+              } catch (e) {
+                uni.showToast({ title: e.message || '保存失败', icon: 'none' });
+              }
+            }
+            ```
+      * `saveStoryboardToDatabase()`: 这个“全部保存”按钮的逻辑现在是错的。你可以**暂时禁用或删除**它，因为 `savePanel` 已经实现了保存。
+
+**3. `frontend/pages/projects/list.vue`**
+
+  * **职责**: 显示项目列表。
+  * **修改**:
+      * `editStoryboard(project)`: 这个方法目前是跳转到 `layout-planner`，但它没有 `text_id`。
+      * **(建议)** 这个按钮不应该叫“编辑分镜”，而应该叫“**查看章节**”。点击后应该跳转到一个*新的*页面（例如 `pages/projects/detail.vue`），该页面显示该项目（`project_id`）下的所有`source_texts`（章节列表）。当用户点击*某个章节*时，才跳转到 `layout-planner` 并传入`project_id`和`text_id`。
+      * **(临时修复)** 如果你不想创建新页面，那么 `editStoryboard(project)` 应该**跳转到 `script-analyzer.vue`** 并传入 `project_id`，让用户 *先* 上传或选择章节文本。
+        ```javascript
+        editStoryboard(project) {
+          // 错误:
+          // uni.navigateTo({
+          //   url: `/pages/storyboard/layout-planner?project_id=${project.project_id}`
+          // })
+          
+          // 正确 (临时):
+          uni.navigateTo({
+            url: `/pages/storyboard/script-analyzer?project_id=${project.project_id}`
+          })
+        }
+        ```

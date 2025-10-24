@@ -21,6 +21,7 @@ class TableNames:
     PROJECTS = "projects"
     SOURCE_TEXTS = "source_texts"
     CHARACTERS = "characters"
+    STORYBOARDS = "storyboards"
 
 
 # 字段名常量
@@ -66,6 +67,24 @@ class CharacterFields:
     REFERENCE_IMAGE_URLS = "reference_image_urls"
     LORA_MODEL_PATH = "lora_model_path"
     TRIGGER_WORD = "trigger_word"
+
+
+class StoryboardFields:
+    """分镜表字段"""
+    STORYBOARD_ID = "storyboard_id"
+    PROJECT_ID = "project_id"
+    SOURCE_TEXT_ID = "source_text_id"
+    PANEL_INDEX = "panel_index"
+    ORIGINAL_TEXT_SNIPPET = "original_text_snippet"
+    CHARACTER_APPEARANCE = "character_appearance"
+    SCENE_AND_LIGHTING = "scene_and_lighting"
+    CAMERA_AND_COMPOSITION = "camera_and_composition"
+    EXPRESSION_AND_ACTION = "expression_and_action"
+    STYLE_REQUIREMENTS = "style_requirements"
+    GENERATED_IMAGE_URL = "generated_image_url"
+    CREATED_AT = "created_at"
+    UPDATED_AT = "updated_at"
+    CHARACTER_ID = "character_id"
 
 
 # 数据模型类
@@ -259,45 +278,77 @@ class Character:
 
 # 分镜相关模型
 class StoryboardPanel:
-    """分镜面板模型"""
+    """分镜面板模型（数据库表结构）"""
     
     def __init__(
         self,
-        panel_index: int = 1,
-        description: str = "",
-        characters: Optional[List[str]] = None,
-        dialogue: Optional[List[str]] = None,
-        camera_angle: Optional[str] = None,
-        emotion: Optional[str] = None
+        storyboard_id: Optional[str] = None,
+        project_id: str = "",
+        source_text_id: str = "",
+        panel_index: int = 0,
+        original_text_snippet: Optional[str] = None,
+        character_appearance: Optional[str] = None,
+        scene_and_lighting: Optional[str] = None,
+        camera_and_composition: Optional[str] = None,
+        expression_and_action: Optional[str] = None,
+        style_requirements: Optional[str] = None,
+        generated_image_url: Optional[str] = None,
+        created_at: Optional[datetime] = None,
+        updated_at: Optional[datetime] = None,
+        character_id: Optional[str] = None
     ):
+        self.storyboard_id = storyboard_id or str(uuid.uuid4())
+        self.project_id = project_id
+        self.source_text_id = source_text_id
         self.panel_index = panel_index
-        self.description = description
-        self.characters = characters or []
-        self.dialogue = dialogue or []
-        self.camera_angle = camera_angle
-        self.emotion = emotion
+        self.original_text_snippet = original_text_snippet
+        self.character_appearance = character_appearance
+        self.scene_and_lighting = scene_and_lighting
+        self.camera_and_composition = camera_and_composition
+        self.expression_and_action = expression_and_action
+        self.style_requirements = style_requirements
+        self.generated_image_url = generated_image_url
+        self.created_at = created_at
+        self.updated_at = updated_at
+        self.character_id = character_id
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
         return {
-            "panel_index": self.panel_index,
-            "description": self.description,
-            "characters": self.characters,
-            "dialogue": self.dialogue,
-            "camera_angle": self.camera_angle,
-            "emotion": self.emotion
+            StoryboardFields.STORYBOARD_ID: self.storyboard_id,
+            StoryboardFields.PROJECT_ID: self.project_id,
+            StoryboardFields.SOURCE_TEXT_ID: self.source_text_id,
+            StoryboardFields.PANEL_INDEX: self.panel_index,
+            StoryboardFields.ORIGINAL_TEXT_SNIPPET: self.original_text_snippet,
+            StoryboardFields.CHARACTER_APPEARANCE: self.character_appearance,
+            StoryboardFields.SCENE_AND_LIGHTING: self.scene_and_lighting,
+            StoryboardFields.CAMERA_AND_COMPOSITION: self.camera_and_composition,
+            StoryboardFields.EXPRESSION_AND_ACTION: self.expression_and_action,
+            StoryboardFields.STYLE_REQUIREMENTS: self.style_requirements,
+            StoryboardFields.GENERATED_IMAGE_URL: self.generated_image_url,
+            StoryboardFields.CREATED_AT: self.created_at,
+            StoryboardFields.UPDATED_AT: self.updated_at,
+            StoryboardFields.CHARACTER_ID: self.character_id
         }
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'StoryboardPanel':
         """从字典创建实例"""
         return cls(
-            panel_index=data.get("panel_index", 1),
-            description=data.get("description", ""),
-            characters=data.get("characters", []),
-            dialogue=data.get("dialogue", []),
-            camera_angle=data.get("camera_angle"),
-            emotion=data.get("emotion")
+            storyboard_id=data.get(StoryboardFields.STORYBOARD_ID),
+            project_id=data.get(StoryboardFields.PROJECT_ID, ""),
+            source_text_id=data.get(StoryboardFields.SOURCE_TEXT_ID, ""),
+            panel_index=data.get(StoryboardFields.PANEL_INDEX, 0),
+            original_text_snippet=data.get(StoryboardFields.ORIGINAL_TEXT_SNIPPET),
+            character_appearance=data.get(StoryboardFields.CHARACTER_APPEARANCE),
+            scene_and_lighting=data.get(StoryboardFields.SCENE_AND_LIGHTING),
+            camera_and_composition=data.get(StoryboardFields.CAMERA_AND_COMPOSITION),
+            expression_and_action=data.get(StoryboardFields.EXPRESSION_AND_ACTION),
+            style_requirements=data.get(StoryboardFields.STYLE_REQUIREMENTS),
+            generated_image_url=data.get(StoryboardFields.GENERATED_IMAGE_URL),
+            created_at=data.get(StoryboardFields.CREATED_AT),
+            updated_at=data.get(StoryboardFields.UPDATED_AT),
+            character_id=data.get(StoryboardFields.CHARACTER_ID)
         )
 
 

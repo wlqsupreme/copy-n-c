@@ -25,7 +25,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 # 导入数据库层
 from app.db import (
     db_client, create_project, get_projects_by_user,
-    get_project_by_id, load_storyboard, get_public_projects,
+    get_project_by_id, get_public_projects,
     ProjectVisibility
 )
 
@@ -146,23 +146,23 @@ async def get_user_projects(user_id: str):
 @router.get("/api/v1/project/{project_id}", tags=["Project"])
 async def get_project(project_id: str):
     """
-    获取项目详情（包含分镜数据）
+    获取项目详情
     
     功能说明：
-    - 根据项目ID获取完整的项目信息
-    - 自动加载项目关联的分镜数据
-    - 返回项目详情和分镜内容
+    - 根据项目ID获取项目基本信息
+    - 不再包含分镜数据（分镜数据通过专门的API获取）
+    - 返回项目基本信息
     
     使用场景：
     - 用户打开项目进行编辑
     - 项目详情页面展示
-    - 分镜数据的加载和显示
+    - 项目基本信息显示
     
     参数：
         project_id: 项目ID
     
     返回：
-        dict: 包含项目详情和分镜数据的JSON响应
+        dict: 包含项目详情的JSON响应
     """
     print(f"📂(API) 收到获取项目详情请求: {project_id}")
     
@@ -177,16 +177,9 @@ async def get_project(project_id: str):
             print(f"❌(API) 项目不存在: {project_id}")
             raise HTTPException(status_code=404, detail="项目不存在")
         
-        # 2. 加载分镜数据
-        storyboard = await load_storyboard(project_id)
-        
-        # 3. 组装返回数据
+        # 2. 组装返回数据
         result = project.to_dict()
-        if storyboard:
-            result["storyboard"] = storyboard.to_dict()
-            print(f"✅(API) 项目详情加载成功，包含分镜数据")
-        else:
-            print(f"✅(API) 项目详情加载成功，无分镜数据")
+        print(f"✅(API) 项目详情加载成功")
         
         return {"ok": True, "project": result}
         

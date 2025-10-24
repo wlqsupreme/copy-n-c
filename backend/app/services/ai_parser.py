@@ -19,6 +19,7 @@ import json
 import re
 import os
 import sys
+from typing import List, Dict, Any
 
 # 添加 backend 目录到 Python 路径，确保能导入config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -121,53 +122,105 @@ async def call_qiniu_api(messages: list) -> dict:
     return parsed
 
 
-async def generate_storyboard_for_segment(segment_text: str, title: str, segment_index: int) -> list:
+async def generate_storyboard_for_segment(
+    segment_text: str, 
+    title: str, 
+    segment_index: int,
+    existing_characters: List[Dict[str, Any]] = None
+) -> dict:
     """
-    为单个文本段生成分镜
+    为单个文本段生成分镜和角色信息（感知项目上下文）
     
     功能说明：
     - 将小说文本转换为漫画分镜结构
+    - 感知项目中已存在的角色，避免重复生成
+    - 只生成新角色的基础描述，已存在角色只生成情景外貌
     - 考虑镜头构图、人物表情、场景描述等要素
-    - 生成标准化的分镜JSON格式
+    - 生成标准化的JSON格式，包含characters和storyboards列表
     
     参数：
         segment_text: 要处理的文本段落
         title: 小说标题（用于上下文）
         segment_index: 段落序号
+        existing_characters: 该项目已存在的角色列表
     
     返回：
-        list: 分镜页面列表，每个页面包含多个panel
+        dict: 包含characters和storyboards的字典
     """
-    print(f"🎬(AI服务) 开始生成分镜 (段落 {segment_index})...")
+    print(f"🎬(AI服务) 开始生成分镜和角色信息 (段落 {segment_index})...")
     print(f"   文本长度: {len(segment_text)} 字符")
     
+    # 序列化已存在的角色列表
+    existing_chars_json = "[]"
+    if existing_characters:
+        try:
+            existing_chars_json = json.dumps(existing_characters, ensure_ascii=False)
+            print(f"   感知到 {len(existing_characters)} 个已存在的角色。")
+        except Exception:
+            pass  # 即使失败，也使用空列表
+    
     # 构建AI提示词
+    system_prompt = f"""你是一个专业的分镜脚本生成器。
+
+本项目已经定义了以下角色：
+{existing_chars_json}
+
+你的任务是：
+1. **分析用户文本**：阅读用户提供的文本片段。
+2. **生成分镜 (storyboards)**：
+   * 为文本生成详细的分镜面板。
+   * `character_name` 必须与角色名称匹配。
+   * `character_appearance` 必须生成，描述该分镜中角色的*特定*外貌、穿着或表情（例如"衣服破损"、"泪流满面"）。
+3. **识别新角色 (characters)**：
+   * **仅当**文本中出现了*不在*上面"本项目已经定义的角色"列表中的**新角色**时，才在`characters`数组中添加该角色的基础描述（`description`）。
+   * 如果文本中的角色都*已存在*于列表中，请返回一个**空**的`characters`数组 ( `[]` )。
+
+请严格按照以下JSON格式返回数据：
+{{
+  "characters": [
+    {{
+      "name": "新角色名称",
+      "description": "该新角色的详细基础描述 (年龄, 性别, 身高...)"
+    }}
+  ],
+  "storyboards": [
+    {{
+      "original_text_snippet": "该分镜对应的原始文本片段",
+      "character_name": "主要角色名称 (必须是已存在或新角色)",
+      "character_appearance": "该分镜中角色的*情景*外貌描述",
+      "scene_and_lighting": "场景与光照描述",
+      "camera_and_composition": "镜头与构图描述",
+      "expression_and_action": "表情与动作描述",
+      "style_requirements": "风格要求描述"
+    }}
+  ]
+}}"""
+    
     messages = [
         {
             "role": "system", 
-            "content": """你是一个专业的分镜脚本生成器。根据小说文本生成漫画分镜，考虑以下要素：
-1. 剧情节点和节奏
-2. 镜头构图（近景/中景/远景/特写）
-3. 人物表情和动作
-4. 场景描述
-5. 对话气泡位置
-
-返回严格JSON格式：{"pages": [{"page_index": int, "panels": [{"panel_index": int, "description": str, "characters": [str], "dialogue": [str], "camera_angle": str, "emotion": str}]}]}"""
+            "content": system_prompt
         },
         {
             "role": "user", 
-            "content": f"标题: {title or ''}\n段落 {segment_index}:\n{segment_text}\n\n请生成分镜JSON，每页3-6个panel。"
+            "content": f"标题: {title or ''}\n段落 {segment_index}:\n{segment_text}\n\n请根据以上规则，生成分镜和角色信息的JSON数据。"
         }
     ]
     
     # 调用AI API生成分镜
     result = await call_qiniu_api(messages)
-    if result and "pages" in result:
-        print(f"✅(AI服务) 分镜生成成功，生成 {len(result['pages'])} 页")
-        return result["pages"]
+    if result and "storyboards" in result:
+        # 确保 characters 键存在，即使AI返回了null或漏掉了
+        if "characters" not in result:
+            result["characters"] = []
+            
+        print(f"✅(AI服务) 分镜和角色生成成功")
+        print(f"   识别到新角色数量: {len(result['characters'])}")
+        print(f"   生成分镜数量: {len(result['storyboards'])}")
+        return result
     else:
-        print(f"❌(AI服务) 分镜生成失败")
-        return []
+        print(f"❌(AI服务) 分镜和角色生成失败")
+        return {"characters": [], "storyboards": []}
 
 
 def simple_text_segment(text: str) -> list:
@@ -216,7 +269,7 @@ def simple_text_segment(text: str) -> list:
     return segments
 
 
-async def segment_text(text: str) -> list:
+async def segment_text(text: str, existing_characters: List[Dict[str, Any]] = None) -> list:
     """
     将长文本进行智能分段
     
