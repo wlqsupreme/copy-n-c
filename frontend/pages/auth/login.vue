@@ -84,6 +84,8 @@
 </template>
 
 <script>
+import authManager from '../../utils/auth.js'
+
 export default {
   data() {
     return {
@@ -146,27 +148,32 @@ export default {
       this.isLoading = true
       
       try {
-        // 这里可以添加实际的登录API调用
-        // const response = await this.loginAPI(this.loginForm)
+        // 使用认证管理器进行登录
+        const result = await authManager.login(
+          this.loginForm.username,
+          this.loginForm.password
+        )
         
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 1500))
-        
-        uni.showToast({
-          title: '登录成功',
-          icon: 'success'
-        })
-        
-        // 登录成功后跳转到首页
-        setTimeout(() => {
-          uni.reLaunch({
-            url: '/pages/index/index'
+        if (result.success) {
+          uni.showToast({
+            title: '登录成功',
+            icon: 'success'
           })
-        }, 1500)
+          
+          // 登录成功后跳转到首页
+          setTimeout(() => {
+            uni.reLaunch({
+              url: '/pages/index/index'
+            })
+          }, 1500)
+        } else {
+          throw new Error(result.message || '登录失败')
+        }
         
       } catch (error) {
+        console.error('登录失败:', error)
         uni.showToast({
-          title: '登录失败，请检查用户名和密码',
+          title: error.message || '登录失败，请检查用户名和密码',
           icon: 'none'
         })
       } finally {

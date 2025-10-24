@@ -109,6 +109,8 @@
 </template>
 
 <script>
+import authManager from '../../utils/auth.js'
+
 export default {
   data() {
     return {
@@ -208,27 +210,33 @@ export default {
       this.isLoading = true
       
       try {
-        // 这里可以添加实际的注册API调用
-        // const response = await this.registerAPI(this.registerForm)
+        // 使用认证管理器进行注册
+        const result = await authManager.register(
+          this.registerForm.username,
+          this.registerForm.email,
+          this.registerForm.password
+        )
         
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 2000))
-        
-        uni.showToast({
-          title: '注册成功',
-          icon: 'success'
-        })
-        
-        // 注册成功后跳转到登录页面
-        setTimeout(() => {
-          uni.navigateTo({
-            url: '/pages/auth/login'
+        if (result.success) {
+          uni.showToast({
+            title: '注册成功',
+            icon: 'success'
           })
-        }, 1500)
+          
+          // 注册成功后跳转到首页
+          setTimeout(() => {
+            uni.reLaunch({
+              url: '/pages/index/index'
+            })
+          }, 1500)
+        } else {
+          throw new Error(result.message || '注册失败')
+        }
         
       } catch (error) {
+        console.error('注册失败:', error)
         uni.showToast({
-          title: '注册失败，请稍后重试',
+          title: error.message || '注册失败，请稍后重试',
           icon: 'none'
         })
       } finally {

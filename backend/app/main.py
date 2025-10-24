@@ -28,7 +28,7 @@ from config import config
 from app.db import init_database, close_database, db_client
 
 # 导入API路由模块
-from app.api import storyboard, project
+from app.api import storyboard, project, auth
 
 # 检查配置是否有效
 if not config.is_valid():
@@ -52,6 +52,8 @@ app.add_middleware(
 )
 
 # 挂载API路由
+# 认证相关的API路由
+app.include_router(auth.router)
 # 分镜相关的API路由
 app.include_router(storyboard.router)
 # 项目管理相关的API路由

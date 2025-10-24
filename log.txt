@@ -81,206 +81,19 @@ python版本
 
 py -3.11 -m venv venv
 venv\Scripts\activate
-(venv) ...> python -V
+python -V
+# 卸载有问题的bcrypt版本
+pip uninstall bcrypt
+# 重新安装所有依赖
 pip install -r requirements.txt
 # 启动服务
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 python test_db.py
+python test_auth.py
 
 
 
-
-
-
-
--- WARNING: This schema is for context only and is not meant to be run.
--- Table order and constraints may not be valid for execution.
-
-CREATE TABLE public.characters (
-  character_id uuid NOT NULL DEFAULT gen_random_uuid(),
-  project_id uuid NOT NULL,
-  name character varying NOT NULL,
-  description text,
-  reference_image_urls json,
-  lora_model_path character varying,
-  trigger_word character varying,
-  CONSTRAINT characters_pkey PRIMARY KEY (character_id),
-  CONSTRAINT characters_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(project_id)
-);
-CREATE TABLE public.projects (
-  project_id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  title character varying NOT NULL,
-  description text,
-  visibility USER-DEFINED DEFAULT 'private'::project_visibility,
-  default_style_prompt text,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-  CONSTRAINT projects_pkey PRIMARY KEY (project_id),
-  CONSTRAINT projects_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id)
-);
-CREATE TABLE public.source_texts (
-  text_id uuid NOT NULL DEFAULT gen_random_uuid(),
-  project_id uuid NOT NULL,
-  title character varying DEFAULT 'Untitled Chapter'::character varying,
-  raw_content text NOT NULL,
-  order_index integer DEFAULT 0,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-  CONSTRAINT source_texts_pkey PRIMARY KEY (text_id),
-  CONSTRAINT source_texts_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(project_id)
-);
-CREATE TABLE public.users (
-  user_id uuid NOT NULL DEFAULT gen_random_uuid(),
-  username character varying NOT NULL UNIQUE,
-  email character varying NOT NULL UNIQUE,
-  hashed_password character varying NOT NULL,
-  credit_balance integer DEFAULT 0,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
-  CONSTRAINT users_pkey PRIMARY KEY (user_id)
-);
-
-
-
-
-
-
-
-
-supabase数据库设计与创建
--- ----------------------------
--- 0. 创建一个函数，用于自动更新 'updated_at' 字段的时间戳
--- (PostgreSQL 中 'ON UPDATE' 功能的实现方式)
--- ----------------------------
-CREATE OR REPLACE FUNCTION trigger_set_timestamp()
-RETURNS TRIGGER AS $$
-BEGIN
-  NEW.updated_at = timezone('utc'::text, now());
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-
--- ----------------------------
--- 1. 为 'projects' 表创建 ENUM 类型
--- (PostgreSQL 推荐的方式)
--- ----------------------------
-CREATE TYPE project_visibility AS ENUM ('private', 'public');
-
-
--- ----------------------------
--- 表 1: users (用户信息表)
--- ----------------------------
-CREATE TABLE "users" (
-    "user_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- 改为 UUID 类型并自动生成
-    "username" VARCHAR(100) UNIQUE NOT NULL,
-    "email" VARCHAR(255) UNIQUE NOT NULL,
-    "hashed_password" VARCHAR(255) NOT NULL,
-    "credit_balance" INT DEFAULT 0,
-    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()), -- Supabase 推荐使用带时区的时间
-    "updated_at" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
-);
-
--- 表 1 的注解
-COMMENT ON TABLE "users" IS '用户信息表';
-COMMENT ON COLUMN "users"."user_id" IS '唯一用户ID (UUID)';
-COMMENT ON COLUMN "users"."username" IS '用户名 (用于登录，必须唯一)';
-COMMENT ON COLUMN "users"."email" IS '电子邮箱 (用于登录或找回密码，必须唯一)';
-COMMENT ON COLUMN "users"."hashed_password" IS '加密后的密码 (例如使用bcrypt或Argon2)';
-COMMENT ON COLUMN "users"."credit_balance" IS '可使用额度 (例如: 剩余可生成图片张数或Token数)';
-COMMENT ON COLUMN "users"."created_at" IS '账户创建时间';
-COMMENT ON COLUMN "users"."updated_at" IS '账户信息最后更新时间';
-
--- 表 1 的 'updated_at' 触发器
-CREATE TRIGGER set_users_updated_at
-BEFORE UPDATE ON "users"
-FOR EACH ROW
-EXECUTE FUNCTION trigger_set_timestamp();
-
-
--- ----------------------------
--- 表 2: projects (漫画项目表)
--- ----------------------------
-DROP TABLE IF EXISTS "projects";
-CREATE TABLE "projects" (
-    "project_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- 改为 UUID
-    "user_id" UUID NOT NULL, -- 改为 UUID
-    "title" VARCHAR(255) NOT NULL,
-    "description" TEXT,
-    "visibility" project_visibility DEFAULT 'private', -- 使用上面创建的 ENUM 类型
-    "default_style_prompt" TEXT,
-    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
-    "updated_at" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
-    FOREIGN KEY ("user_id") REFERENCES "users"("user_id") ON DELETE CASCADE
-);
-
--- 表 2 的注解
-COMMENT ON TABLE "projects" IS '漫画项目表';
-COMMENT ON COLUMN "projects"."project_id" IS '唯一项目ID (UUID)';
-COMMENT ON COLUMN "projects"."user_id" IS '外键，关联到 users(user_id)，表示该项目的所有者';
-COMMENT ON COLUMN "projects"."title" IS '项目标题 (例如 "我的XX小说改编")';
-COMMENT ON COLUMN "projects"."description" IS '项目描述';
-COMMENT ON COLUMN "projects"."visibility" IS '可见性：private(仅自己), public(他人可见)';
-COMMENT ON COLUMN "projects"."default_style_prompt" IS '项目的默认风格提示词 (例如 "shonen manga, high contrast")';
-COMMENT ON COLUMN "projects"."created_at" IS '项目创建时间';
-COMMENT ON COLUMN "projects"."updated_at" IS '项目最后更新时间';
-
--- 表 2 的 'updated_at' 触发器
-CREATE TRIGGER set_projects_updated_at
-BEFORE UPDATE ON "projects"
-FOR EACH ROW
-EXECUTE FUNCTION trigger_set_timestamp();
-
-
--- ----------------------------
--- 表 3: source_texts (小说原文表)
--- ----------------------------
-DROP TABLE IF EXISTS "source_texts";
-CREATE TABLE "source_texts" (
-    "text_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- 改为 UUID
-    "project_id" UUID NOT NULL, -- 改为 UUID
-    "title" VARCHAR(255) DEFAULT 'Untitled Chapter',
-    "raw_content" TEXT NOT NULL, -- LONGTEXT 变为 TEXT
-    "order_index" INT DEFAULT 0,
-    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
-    FOREIGN KEY ("project_id") REFERENCES "projects"("project_id") ON DELETE CASCADE
-);
-
--- 表 3 的注解
-COMMENT ON TABLE "source_texts" IS '小说原文表';
-COMMENT ON COLUMN "source_texts"."text_id" IS '唯一文本ID (UUID)';
-COMMENT ON COLUMN "source_texts"."project_id" IS '外键，关联到 projects(project_id)';
-COMMENT ON COLUMN "source_texts"."title" IS '标题 (例如 "第一章" 或 "番外篇")';
-COMMENT ON COLUMN "source_texts"."raw_content" IS '存储用户上传的原始小说文本 (PostgreSQL的TEXT类型已足够)';
-COMMENT ON COLUMN "source_texts"."order_index" IS '用于章节或文本片段的排序';
-COMMENT ON COLUMN "source_texts"."created_at" IS '上传时间';
-
-
--- ----------------------------
--- 表 4: characters (项目角色表)
--- ----------------------------
-DROP TABLE IF EXISTS "characters";
-CREATE TABLE "characters" (
-    "character_id" UUID PRIMARY KEY DEFAULT gen_random_uuid(), -- 改为 UUID
-    "project_id" UUID NOT NULL, -- 改为 UUID
-    "name" VARCHAR(255) NOT NULL,
-    "description" TEXT,
-    "reference_image_urls" JSON, -- PostgreSQL 原生支持 JSON, 很好
-    "lora_model_path" VARCHAR(1024),
-    "trigger_word" VARCHAR(100),
-    FOREIGN KEY ("project_id") REFERENCES "projects"("project_id") ON DELETE CASCADE
-);
-
--- 表 4 的注解
-COMMENT ON TABLE "characters" IS '项目角色表';
-COMMENT ON COLUMN "characters"."character_id" IS '唯一角色ID (UUID)';
-COMMENT ON COLUMN "characters"."project_id" IS '外键，关联到 projects(project_id)';
-COMMENT ON COLUMN "characters"."name" IS '角色名称 (例如 "张三")';
-COMMENT ON COLUMN "characters"."description" IS '角色外貌、性格描述 (给LLM用)';
-COMMENT ON COLUMN "characters"."reference_image_urls" IS '角色参考图URL列表 (JSON数组格式, 存储S3/OSS的URL)';
-COMMENT ON COLUMN "characters"."lora_model_path" IS '指向 S3/OSS 上的LoRA模型或Embedding文件路径';
-COMMENT ON COLUMN "characters"."trigger_word" IS '触发该LoRA的关键词 (例如 "ohwx_zhangsan")';
 
 
 
@@ -355,416 +168,146 @@ COMMENT ON COLUMN "characters"."trigger_word" IS '触发该LoRA的关键词 (例
 
 -----
 
-### 建议的目录结构（改动最小）
+# 新的目录结构说明 - 项目重构完成
 
-这是在您**现有**结构上扩展的最简方案：
+## 🎉 重构完成！
+
+根据log.txt中的建议，我们已经成功将`main.py`拆分为更清晰、更易维护的结构。
+
+## 📁 新的目录结构
 
 ```
 backend/
 ├── app/
-│   ├── db/                 # (您已完成) 数据库操作，不动
-│   │   ├── client.py
-│   │   ├── crud.py
-│   │   └── models.py
-│   │
-│   ├── api/                # (新建) API路由层 (Web接口)
+│   ├── db/                    # 数据库层（已完成）
 │   │   ├── __init__.py
-│   │   ├── storyboard.py   # (新建) 负责你所有的分镜API
-│   │   ├── project.py      # (新建) 负责项目管理的API
-│   │   └── image_gen.py    # (协作者的文件) 负责图像生成的API
+│   │   ├── client.py          # Supabase客户端管理
+│   │   ├── crud.py            # 数据库CRUD操作
+│   │   └── models.py          # 数据模型定义
 │   │
-│   ├── services/           # (新建) AI服务层 (核心逻辑)
+│   ├── api/                   # API路由层（新建）
 │   │   ├── __init__.py
-│   │   ├── ai_parser.py    # (新建) 你的小说解析、分镜规划逻辑
-│   │   └── ai_image.py     # (协作者的文件) 他的文生图逻辑
+│   │   ├── storyboard.py      # 分镜相关API
+│   │   └── project.py         # 项目管理API
 │   │
-│   └── main.py             # (修改) 变得非常"瘦"，只负责启动和组装
+│   ├── services/              # AI服务层（新建）
+│   │   ├── __init__.py
+│   │   └── ai_parser.py       # AI文本解析和分镜生成
+│   │
+│   └── main.py                # 应用主入口（重构）
 │
-├── config.py               # 不动
-├── test_db.py              # 不动
-└── requirements.txt        # 不动
+├── config.py                  # 配置管理
+├── test_db.py                 # 数据库测试
+└── requirements.txt           # 依赖管理
 ```
 
------
+## 🔧 各层职责说明
 
-### 如何拆分：三步走
+### 1. **services层** - AI服务层
+**文件**: `backend/app/services/ai_parser.py`
+**职责**:
+- 调用七牛云AI API进行文本处理
+- 智能分段：将长篇小说按情节节点分段
+- 分镜生成：将文本转换为漫画分镜结构
+- 错误处理和降级策略
 
-#### 第1步：创建 `services` (AI服务层)
+**特点**:
+- 纯业务逻辑，不涉及HTTP请求/响应
+- 不直接操作数据库，通过上层API调用
+- 可独立测试和复用
+- 为协作者预留扩展空间（如文生图功能）
 
-这个文件只放纯粹的AI处理逻辑，它不应该知道“API”或“HTTP”是什么。
+### 2. **api层** - API路由层
+**文件**: 
+- `backend/app/api/storyboard.py` - 分镜相关API
+- `backend/app/api/project.py` - 项目管理API
 
-**新建 `backend/app/services/ai_parser.py` 文件：**
-(将 `main.py` 中的AI相关函数**剪切**并**粘贴**到这里)
+**职责**:
+- 接收前端Vue页面的HTTP请求
+- 调用services层进行AI处理
+- 调用db层进行数据存储
+- 返回标准化的JSON响应
 
-```python
-# backend/app/services/ai_parser.py
-import httpx
-import json
-import re
-from config import config
+**特点**:
+- 只处理HTTP请求/响应，不包含业务逻辑
+- 统一的错误处理和状态码返回
+- 为前端提供清晰的数据接口
 
-QINIU_API_BASE = "https://openai.qiniu.com/v1"  # 七牛 openai 兼容入口
+### 3. **main.py** - 应用组装
+**文件**: `backend/app/main.py`
+**职责**:
+- 应用启动和配置
+- 中间件设置（CORS等）
+- 路由组装和挂载
+- 数据库连接管理
+- 健康检查接口
 
-async def call_qiniu_api(messages: list) -> dict:
-    """调用七牛云API的通用函数"""
-    payload = {
-        "model": config.model,
-        "messages": messages,
-        "max_tokens": config.max_tokens,
-        "temperature": config.temperature
-    }
-    headers = {
-        "Authorization": f"Bearer {config.api_key}",
-        "Content-Type": "application/json"
-    }
-    url = f"{QINIU_API_BASE}/chat/completions"
-    
-    print(f"🚀(AI服务) 开始调用七牛云API...")
-    
-    async with httpx.AsyncClient(timeout=config.timeout) as client:
-        try:
-            r = await client.post(url, headers=headers, json=payload)
-            r.raise_for_status() # 确保HTTP错误会抛出异常
-            
-            print(f"📥(AI服务) 收到响应: {r.status_code}")
-            data = r.json()
-            
-            # (省略了您已有的解析 content 和 JSON 的逻辑...)
-            content = data.get("choices", [{}])[0].get("message", {}).get("content", "{}")
-            
-            parsed = None
-            try:
-                parsed = json.loads(content)
-            except Exception:
-                m = re.search(r"\{[\s\S]*\}", content)
-                if m:
-                    try:
-                        parsed = json.loads(m.group(0))
-                    except Exception:
-                        parsed = None
-            return parsed
+**特点**:
+- 保持极简，不包含业务逻辑
+- 通过导入和组装其他模块完成功能
+- 便于协作者添加新的API路由
+- 清晰的启动和关闭流程
 
-        except httpx.RequestError as e:
-            print(f"❌(AI服务) 网络请求失败: {e}")
-            return None
-        except Exception as e:
-            print(f"❌(AI服务) API调用失败: {e}")
-            return None
+## 🚀 协作优势
 
+### 对您（分镜功能）：
+- 专注于 `services/ai_parser.py` 和 `api/storyboard.py`
+- 可以独立开发和测试AI解析功能
+- 不影响其他功能模块
 
-async def generate_storyboard_for_segment(segment_text: str, title: str, segment_index: int) -> list:
-    """为单个文本段生成分镜"""
-    print(f"🎬(AI服务) 开始生成分镜 (段落 {segment_index})...")
-    
-    messages = [
-        {"role": "system", "content": "你是一个专业的分镜脚本生成器... (省略system prompt) ..."},
-        {"role": "user", "content": f"标题: {title or ''}\n段落 {segment_index}:\n{segment_text}\n\n请生成分镜JSON，每页3-6个panel。"}
-    ]
-    
-    result = await call_qiniu_api(messages)
-    if result and "pages" in result:
-        print(f"✅(AI服务) 分镜生成成功，生成 {len(result['pages'])} 页")
-        return result["pages"]
-    else:
-        print(f"❌(AI服务) 分镜生成失败")
-        return []
+### 对协作者（文生图功能）：
+- 可以创建 `services/ai_image.py` 和 `api/image_gen.py`
+- 在 `main.py` 中简单添加路由挂载
+- 完全独立的开发空间
 
-def simple_text_segment(text: str) -> list:
-    """简单的文本分段规则"""
-    # (省略了您已有的简单分段逻辑...)
-    segments = []
-    paragraphs = text.split('\n\n')
-    current_segment = ""
-    segment_index = 1
-    
-    for para in paragraphs:
-        if len(current_segment + para) > 1000 and current_segment:
-            segments.append({"segment_index": segment_index, "content": current_segment.strip(), "summary": "..."})
-            current_segment = para
-            segment_index += 1
-        else:
-            current_segment += "\n\n" + para if current_segment else para
-    
-    if current_segment:
-        segments.append({"segment_index": segment_index, "content": current_segment.strip(), "summary": "..."})
-    
-    return segments
+## 📝 详细注释说明
 
+每个文件都包含了详细的注释，说明：
+- 文件的主要功能和职责
+- 每个函数的作用和参数
+- 设计原则和架构考虑
+- 使用场景和扩展方向
 
-async def segment_text(text: str) -> list:
-    """将长文本分段"""
-    print(f"📝(AI服务) 开始AI智能分段...")
-    messages = [
-        {"role": "system", "content": "你是一个文本分段专家... (省略system prompt) ..."},
-        {"role": "user", "content": f"请将以下文本分段：\n\n{text}"}
-    ]
-    
-    result = await call_qiniu_api(messages)
-    if result and "segments" in result:
-        print(f"✅(AI服务) AI分段成功，生成 {len(result['segments'])} 段")
-        return result["segments"]
-    else:
-        print(f"⚠️(AI服务) AI分段失败，使用规则分段...")
-        segments = simple_text_segment(text)
-        print(f"✅(AI服务) 规则分段完成，生成 {len(segments)} 段")
-        return segments
-```
-
-#### 第2步：创建 `api` (API路由层)
-
-这个文件只负责处理HTTP请求和响应。它调用 `services` 层来完成工作，调用 `db` 层来存取数据。
-
-**新建 `backend/app/api/storyboard.py` 文件：**
-(将 `main.py` 中与分镜相关的API**剪切**并**粘贴**到这里)
-
-```python
-# backend/app/api/storyboard.py
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from typing import Any, Dict
-
-# 导入db和服务
-from app.db import db_client, save_storyboard, Storyboard
-from app.services import ai_parser # 导入我们刚创建的AI服务
-
-router = APIRouter()
-
-# 把 Pydantic 模型也移过来
-class ParseRequest(BaseModel):
-    title: str | None = None
-    text: str
-    auto_segment: bool = True
-    user_id: str | None = None
-    project_id: str | None = None
-
-class SaveStoryboardRequest(BaseModel):
-    project_id: str
-    storyboard: Dict[str, Any]
-
-# --- 场景1：创建分镜 ---
-@router.post("/api/v1/parse", tags=["Storyboard"])
-async def parse_text(req: ParseRequest):
-    """
-    接收小说文本，调用AI生成分镜，并存入数据库。
-    (这是您数据流中的“创建”场景)
-    """
-    print(f"📖(API) 收到解析请求: {req.project_id}")
-    
-    # 1. 调用AI服务层处理逻辑
-    if req.auto_segment and len(req.text) > 1000:
-        segments = await ai_parser.segment_text(req.text)
-        all_pages = []
-        for i, segment in enumerate(segments):
-            pages = await ai_parser.generate_storyboard_for_segment(segment, req.title, i + 1)
-            all_pages.extend(pages)
-    else:
-        all_pages = await ai_parser.generate_storyboard_for_segment(req.text, req.title, 1)
-
-    storyboard_obj = Storyboard.from_dict({"pages": all_pages})
-    
-    # 2. 调用DB层存入数据库
-    if req.project_id and db_client.is_connected:
-        try:
-            success = await save_storyboard(req.project_id, storyboard_obj)
-            if success:
-                print(f"✅(API) 分镜已保存到项目 {req.project_id}")
-            else:
-                print(f"⚠️(API) 分镜保存失败")
-        except Exception as e:
-            print(f"❌(API) 保存分镜到数据库失败: {e}")
-            
-    # 3. 直接将内存中的结果返回给前端 (最高效)
-    return {"ok": True, "storyboard": storyboard_obj.to_dict()}
-
-# --- 场景3：保存分镜 ---
-@router.post("/api/v1/save-storyboard", tags=["Storyboard"])
-async def save_storyboard_endpoint(req: SaveStoryboardRequest):
-    """
-    保存分镜数据到数据库
-    (这是您数据流中的“编辑保存”场景)
-    """
-    print(f"💾(API) 收到保存请求: {req.project_id}")
-    if not db_client.is_connected:
-        raise HTTPException(status_code=500, detail="数据库未连接")
-    
-    try:
-        storyboard = Storyboard.from_dict(req.storyboard)
-        success = await save_storyboard(req.project_id, storyboard)
-        
-        if success:
-            return {"ok": True, "message": "分镜保存成功"}
-        else:
-            raise HTTPException(status_code=500, detail="分镜保存失败")
-            
-    except Exception as e:
-        print(f"❌(API) 保存分镜失败: {e}")
-        raise HTTPException(status_code=500, detail=f"保存分镜失败: {str(e)}")
+## 🔄 数据流说明
 
 ```
-
-**新建 `backend/app/api/project.py` 文件：**
-(将 `main.py` 中与项目相关的API**剪切**并**粘贴**到这里)
-
-```python
-# backend/app/api/project.py
-from fastapi import APIRouter, HTTPException
-from typing import List
-
-# 导入db
-from app.db import (
-    db_client, create_project, get_projects_by_user,
-    get_project_by_id, load_storyboard, get_public_projects,
-    ProjectVisibility
-)
-
-router = APIRouter()
-
-@router.post("/api/v1/create-project", tags=["Project"])
-async def create_project_endpoint(
-    user_id: str,
-    title: str,
-    description: str | None = None,
-    visibility: str = "private"
-):
-    # (省略了您已有的 create_project_endpoint 逻辑...)
-    if not db_client.is_connected:
-        raise HTTPException(status_code=500, detail="数据库未连接")
-    try:
-        vis_enum = ProjectVisibility(visibility)
-        project = await create_project(
-            user_id=user_id, title=title, description=description, visibility=vis_enum
-        )
-        if project:
-            return {"ok": True, "project": project.to_dict()}
-        else:
-            raise HTTPException(status_code=500, detail="项目创建失败")
-    except Exception as e:
-        print(f"❌(API) 创建项目失败: {e}")
-        raise HTTPException(status_code=500, detail=f"创建项目失败: {str(e)}")
-
-
-@router.get("/api/v1/projects/{user_id}", tags=["Project"])
-async def get_user_projects(user_id: str):
-    # (省略了您已有的 get_user_projects 逻辑...)
-    if not db_client.is_connected:
-        raise HTTPException(status_code=500, detail="数据库未连接")
-    projects = await get_projects_by_user(user_id)
-    return {"ok": True, "projects": [project.to_dict() for project in projects]}
-
-# --- 场景2：加载分镜 ---
-@router.get("/api/v1/project/{project_id}", tags=["Project"])
-async def get_project(project_id: str):
-    """
-    获取项目详情，包含分镜数据
-    (这是您数据流中的“加载已有”场景)
-    """
-    print(f"📂(API) 收到加载请求: {project_id}")
-    if not db_client.is_connected:
-        raise HTTPException(status_code=500, detail="数据库未连接")
-    
-    try:
-        project = await get_project_by_id(project_id)
-        if not project:
-            raise HTTPException(status_code=404, detail="项目不存在")
-        
-        # 核心：加载分镜数据
-        storyboard = await load_storyboard(project_id)
-        
-        result = project.to_dict()
-        if storyboard:
-            result["storyboard"] = storyboard.to_dict() # 把分镜数据塞进去
-        
-        return {"ok": True, "project": result}
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"❌(API) 获取项目失败: {e}")
-        raise HTTPException(status_code=500, detail=f"获取项目失败: {str(e)}")
-
-
-@router.get("/api/v1/public-projects", tags=["Project"])
-async def get_public_projects_endpoint(limit: int = 20, offset: int = 0):
-    # (省略了您已有的 get_public_projects 逻辑...)
-    if not db_client.is_connected:
-        raise HTTPException(status_code=500, detail="数据库未连接")
-    projects = await get_public_projects(limit=limit, offset=offset)
-    return {"ok": True, "projects": [project.to_dict() for project in projects]}
-
+前端Vue页面 
+    ↓ HTTP请求
+API路由层 (storyboard.py/project.py)
+    ↓ 调用
+AI服务层 (ai_parser.py)
+    ↓ 调用
+七牛云AI API
+    ↓ 返回
+AI服务层处理结果
+    ↓ 返回
+API路由层
+    ↓ 调用
+数据库层 (db/)
+    ↓ 返回
+API路由层
+    ↓ HTTP响应
+前端Vue页面
 ```
 
-#### 第3步：修改 `main.py` (组装)
+## ✅ 测试建议
 
-现在您的 `main.py` 会变得极其干净：
+现在可以测试新的结构：
 
-```python
-# backend/app/main.py
-import sys
-import os
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-# 添加 backend 目录到 Python 路径
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from config import config
-from app.db import init_database, close_database, db_client
-from app.api import storyboard, project # 导入新的API路由
-
-# (如果协作者添加了 image_gen, 在这里导入)
-# from app.api import image_gen 
-
-# 检查配置是否有效
-if not config.is_valid():
-    print(config.get_error_message())
-    sys.exit(1)
-
-app = FastAPI()
-
-# 添加 CORS 中间件
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# 挂载您的API路由
-app.include_router(storyboard.router)
-app.include_router(project.router)
-# (如果协作者添加了 image_gen, 在这里挂载)
-# app.include_router(image_gen.router)
-
-
-# 数据库启动和关闭事件 (保持不变)
-@app.on_event("startup")
-async def startup_event():
-    """应用启动时初始化数据库"""
-    print("🚀 应用启动中...")
-    if config.is_database_configured():
-        success = await init_database()
-        if success:
-            is_connected = await db_client.test_connection()
-            if is_connected:
-                print("✅ Supabase数据库连接测试成功")
-            else:
-                print("❌ Supabase数据库连接测试失败")
-    else:
-        print("⚠️ 数据库未配置，跳过数据库初始化")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """应用关闭时清理资源"""
-    print("🛑 应用关闭中...")
-    await close_database()
-
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
-
-# ---------------------------------------------------
-# (main.py 中所有的业务逻辑 / API endpoint 都被移走了)
-# ---------------------------------------------------
+```bash
+cd backend
+venv\Scripts\activate
+python test_db.py  # 测试数据库连接
+uvicorn app.main:app --reload  # 启动API服务
 ```
+
+访问 `http://localhost:8000/docs` 查看API文档，所有接口都应该正常工作！
+
+## 🎯 下一步
+
+1. **测试所有API接口**确保功能正常
+2. **协作者可以开始添加文生图功能**
+3. **根据需要添加更多API路由**
+4. **优化错误处理和日志记录**
+
+重构完成！现在代码结构更加清晰，便于维护和协作开发。
