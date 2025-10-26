@@ -44,6 +44,7 @@ class ProjectFields:
     DESCRIPTION = "description"
     VISIBILITY = "visibility"
     DEFAULT_STYLE_PROMPT = "default_style_prompt"
+    UPLOAD_METHOD = "upload_method"
     CREATED_AT = "created_at"
     UPDATED_AT = "updated_at"
 
@@ -55,7 +56,11 @@ class SourceTextFields:
     TITLE = "title"
     RAW_CONTENT = "raw_content"
     ORDER_INDEX = "order_index"
+    CHAPTER_NUMBER = "chapter_number"
+    CHAPTER_NAME = "chapter_name"
     CREATED_AT = "created_at"
+    PROCESSING_STATUS = "processing_status"
+    ERROR_MESSAGE = "error_message"
 
 
 class CharacterFields:
@@ -146,6 +151,7 @@ class Project:
         description: Optional[str] = None,
         visibility: ProjectVisibility = ProjectVisibility.PRIVATE,
         default_style_prompt: Optional[str] = None,
+        upload_method: str = "single_chapter",
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None
     ):
@@ -155,6 +161,7 @@ class Project:
         self.description = description
         self.visibility = visibility
         self.default_style_prompt = default_style_prompt
+        self.upload_method = upload_method
         self.created_at = created_at
         self.updated_at = updated_at
     
@@ -167,6 +174,7 @@ class Project:
             ProjectFields.DESCRIPTION: self.description,
             ProjectFields.VISIBILITY: self.visibility.value,
             ProjectFields.DEFAULT_STYLE_PROMPT: self.default_style_prompt,
+            ProjectFields.UPLOAD_METHOD: self.upload_method,
             ProjectFields.CREATED_AT: self.created_at,
             ProjectFields.UPDATED_AT: self.updated_at
         }
@@ -181,6 +189,7 @@ class Project:
             description=data.get(ProjectFields.DESCRIPTION),
             visibility=ProjectVisibility(data.get(ProjectFields.VISIBILITY, ProjectVisibility.PRIVATE.value)),
             default_style_prompt=data.get(ProjectFields.DEFAULT_STYLE_PROMPT),
+            upload_method=data.get(ProjectFields.UPLOAD_METHOD, "single_chapter"),
             created_at=data.get(ProjectFields.CREATED_AT),
             updated_at=data.get(ProjectFields.UPDATED_AT)
         )
@@ -196,14 +205,22 @@ class SourceText:
         title: str = "Untitled Chapter",
         raw_content: str = "",
         order_index: int = 0,
-        created_at: Optional[datetime] = None
+        chapter_number: Optional[int] = None,
+        chapter_name: Optional[str] = None,
+        created_at: Optional[datetime] = None,
+        processing_status: str = "pending",
+        error_message: Optional[str] = None
     ):
         self.text_id = text_id or str(uuid.uuid4())
         self.project_id = project_id
         self.title = title
         self.raw_content = raw_content
         self.order_index = order_index
+        self.chapter_number = chapter_number
+        self.chapter_name = chapter_name
         self.created_at = created_at
+        self.processing_status = processing_status
+        self.error_message = error_message
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -213,7 +230,11 @@ class SourceText:
             SourceTextFields.TITLE: self.title,
             SourceTextFields.RAW_CONTENT: self.raw_content,
             SourceTextFields.ORDER_INDEX: self.order_index,
-            SourceTextFields.CREATED_AT: self.created_at
+            SourceTextFields.CHAPTER_NUMBER: self.chapter_number,
+            SourceTextFields.CHAPTER_NAME: self.chapter_name,
+            SourceTextFields.CREATED_AT: self.created_at,
+            SourceTextFields.PROCESSING_STATUS: self.processing_status,
+            SourceTextFields.ERROR_MESSAGE: self.error_message
         }
     
     @classmethod
@@ -225,7 +246,11 @@ class SourceText:
             title=data.get(SourceTextFields.TITLE, "Untitled Chapter"),
             raw_content=data.get(SourceTextFields.RAW_CONTENT, ""),
             order_index=data.get(SourceTextFields.ORDER_INDEX, 0),
-            created_at=data.get(SourceTextFields.CREATED_AT)
+            chapter_number=data.get(SourceTextFields.CHAPTER_NUMBER),
+            chapter_name=data.get(SourceTextFields.CHAPTER_NAME),
+            created_at=data.get(SourceTextFields.CREATED_AT),
+            processing_status=data.get(SourceTextFields.PROCESSING_STATUS, "pending"),
+            error_message=data.get(SourceTextFields.ERROR_MESSAGE)
         )
 
 

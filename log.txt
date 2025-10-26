@@ -16,6 +16,13 @@
 
 
 
+
+
+
+
+
+
+
 python版本
 
 你不需要“降级”你电脑的 Python。你只需要\*\*“并存”**，然后**告诉虚拟环境（venv）它该用哪个\*\*。
@@ -188,8 +195,6 @@ python test_auth.py
 
 
 
-
-
 /*
  Navicat Premium Dump SQL
 
@@ -204,7 +209,7 @@ python test_auth.py
  Target Server Version : 170006 (170006)
  File Encoding         : 65001
 
- Date: 24/10/2025 10:39:27
+ Date: 26/10/2025 00:49:58
 */
 
 
@@ -236,6 +241,8 @@ COMMENT ON TABLE "public"."characters" IS '项目角色表';
 -- ----------------------------
 INSERT INTO "public"."characters" VALUES ('c0a1b2c3-1111-4f5e-8d9c-0a2a3a4a5b01', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', '李慕白', '年龄17岁, 男性, 身高178cm, 身材修长, 黑色长发束成马尾, 黑色眼眸犀利, 穿着朴素的蓝色武道袍, 背着一个竹制背包和一把剑', '["https://cdn.example.com/ref/limubai_ref1.png"]', '/models/lora/project_a_limubai.safetensors', 'ohwx_limubai');
 INSERT INTO "public"."characters" VALUES ('c0a1b2c3-2222-4f5e-8d9c-0a2a3a4a5b02', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', '王珂', '年龄22岁, 女性, 身高165cm, 中等身材, 凌乱的黑色短发, 惊恐的大眼睛, 穿着宽大的T恤和短裤, 没有配饰', '["https://cdn.example.com/ref/wangke_ref1.png"]', '/models/lora/project_b_wangke.safetensors', 'ohwx_wangke');
+INSERT INTO "public"."characters" VALUES ('508b462f-dff8-4499-8d94-2b00dea1dc76', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '闵峙', '约35岁，男性，超A性别者（Enigma），身高约180 cm，体格健壮，常穿深色西装，眉宇间带有决断的气质，拥有异常强大的信息素能力。', '[]', NULL, NULL);
+INSERT INTO "public"."characters" VALUES ('659d5eb7-0a66-4eb8-90e7-35f5d8ad8ac5', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '付柏启', '约32岁，男性，S级Alpha，身高约185 cm，身形修长，容貌冷峻且极具魅力，常穿剪裁合体的商务西装，头发微湿，气质如高傲的天鹅。', '[]', NULL, NULL);
 
 -- ----------------------------
 -- Table structure for projects
@@ -249,7 +256,8 @@ CREATE TABLE "public"."projects" (
   "visibility" "public"."project_visibility" DEFAULT 'private'::project_visibility,
   "default_style_prompt" text COLLATE "pg_catalog"."default",
   "created_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
-  "updated_at" timestamptz(6) DEFAULT timezone('utc'::text, now())
+  "updated_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
+  "upload_method" varchar(50) COLLATE "pg_catalog"."default" DEFAULT 'single_chapter'::character varying
 )
 ;
 COMMENT ON COLUMN "public"."projects"."project_id" IS '唯一项目ID (UUID)';
@@ -265,9 +273,13 @@ COMMENT ON TABLE "public"."projects" IS '漫画项目表';
 -- ----------------------------
 -- Records of projects
 -- ----------------------------
-INSERT INTO "public"."projects" VALUES ('f47ac10b-58cc-4372-a567-0e02b2c3d479', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '仙尘', '一部关于凡人修仙的小说改编项目', 'private', 'manga, black-and-white screentone, clean lineart, chinese ink style', '2025-10-23 17:55:37.636342+00', '2025-10-23 17:55:37.636342+00');
-INSERT INTO "public"."projects" VALUES ('f47ac10b-58cc-4372-a567-0e02b2c3d480', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', '都市夜归人', '现代都市背景下的奇幻故事', 'public', 'webtoon, full color, high clarity, dynamic actionpose', '2025-10-23 17:55:37.636342+00', '2025-10-23 17:55:37.636342+00');
-INSERT INTO "public"."projects" VALUES ('b7c63fe9-7c25-4122-bf59-0e9fcf34d4a6', '19602e5a-7e68-4e91-8b67-ee27d2f29bd5', '测试项目', '这是一个测试项目', 'private', NULL, '2025-10-24 01:37:31.277426+00', '2025-10-24 01:37:31.277426+00');
+INSERT INTO "public"."projects" VALUES ('f47ac10b-58cc-4372-a567-0e02b2c3d479', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '仙尘', '一部关于凡人修仙的小说改编项目', 'private', 'manga, black-and-white screentone, clean lineart, chinese ink style', '2025-10-23 17:55:37.636342+00', '2025-10-23 17:55:37.636342+00', 'single_chapter');
+INSERT INTO "public"."projects" VALUES ('f47ac10b-58cc-4372-a567-0e02b2c3d480', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', '都市夜归人', '现代都市背景下的奇幻故事', 'public', 'webtoon, full color, high clarity, dynamic actionpose', '2025-10-23 17:55:37.636342+00', '2025-10-23 17:55:37.636342+00', 'single_chapter');
+INSERT INTO "public"."projects" VALUES ('b7c63fe9-7c25-4122-bf59-0e9fcf34d4a6', '19602e5a-7e68-4e91-8b67-ee27d2f29bd5', '测试项目', '这是一个测试项目', 'private', NULL, '2025-10-24 01:37:31.277426+00', '2025-10-24 01:37:31.277426+00', 'single_chapter');
+INSERT INTO "public"."projects" VALUES ('e7e95647-4f6f-40ef-b78f-eba6760a3ed3', '20bf06fe-5cbd-4c14-94ea-6f54ca95bb70', '测试项目', '这是一个测试项目', 'private', NULL, '2025-10-24 07:28:11.744683+00', '2025-10-24 07:28:11.744683+00', 'single_chapter');
+INSERT INTO "public"."projects" VALUES ('c2349b00-6f52-4153-8e30-bf6e673066b3', '3f8f4023-9d72-4b69-a481-e5db08d91a58', '测试项目', '这是一个测试项目', 'private', NULL, '2025-10-25 07:04:10.974517+00', '2025-10-25 07:04:10.974517+00', 'single_chapter');
+INSERT INTO "public"."projects" VALUES ('07235a52-140e-4ea2-b9ad-b7fb173a59a1', 'e8195641-df6b-477a-af43-d7be5981436f', '干涸地', '', 'public', '', '2025-10-25 15:55:59.152459+00', '2025-10-25 15:55:59.152459+00', 'single_chapter');
+INSERT INTO "public"."projects" VALUES ('8889242a-bd61-411e-9ed6-934002ec4c4d', 'e8195641-df6b-477a-af43-d7be5981436f', '123', '', 'private', '', '2025-10-25 16:19:47.086359+00', '2025-10-25 16:19:47.086359+00', 'single_chapter');
 
 -- ----------------------------
 -- Table structure for source_texts
@@ -279,7 +291,11 @@ CREATE TABLE "public"."source_texts" (
   "title" varchar(255) COLLATE "pg_catalog"."default" DEFAULT 'Untitled Chapter'::character varying,
   "raw_content" text COLLATE "pg_catalog"."default" NOT NULL,
   "order_index" int4 DEFAULT 0,
-  "created_at" timestamptz(6) DEFAULT timezone('utc'::text, now())
+  "created_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
+  "processing_status" varchar(32) COLLATE "pg_catalog"."default" DEFAULT 'pending'::character varying,
+  "error_message" text COLLATE "pg_catalog"."default",
+  "chapter_number" int4,
+  "chapter_name" varchar(255) COLLATE "pg_catalog"."default"
 )
 ;
 COMMENT ON COLUMN "public"."source_texts"."text_id" IS '唯一文本ID (UUID)';
@@ -288,13 +304,70 @@ COMMENT ON COLUMN "public"."source_texts"."title" IS '标题 (例如 "第一章"
 COMMENT ON COLUMN "public"."source_texts"."raw_content" IS '存储用户上传的原始小说文本 (PostgreSQL的TEXT类型已足够)';
 COMMENT ON COLUMN "public"."source_texts"."order_index" IS '用于章节或文本片段的排序';
 COMMENT ON COLUMN "public"."source_texts"."created_at" IS '上传时间';
+COMMENT ON COLUMN "public"."source_texts"."processing_status" IS 'AI处理状态 (pending, processing, completed, failed)';
+COMMENT ON COLUMN "public"."source_texts"."error_message" IS '处理失败时的错误信息';
+COMMENT ON COLUMN "public"."source_texts"."chapter_number" IS '章节编号（例如：1, 2, 3...）';
+COMMENT ON COLUMN "public"."source_texts"."chapter_name" IS '章节名称（例如："第一章：下山"）';
 COMMENT ON TABLE "public"."source_texts" IS '小说原文表';
 
 -- ----------------------------
 -- Records of source_texts
 -- ----------------------------
-INSERT INTO "public"."source_texts" VALUES ('d1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2c', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', '第一章：下山', '清晨，雾气尚未散去，少年李慕白背着行囊，最后看了一眼山顶的茅屋，毅然转身下山。他不知道，此行将改变他的一生。', 0, '2025-10-23 17:55:37.857842+00');
-INSERT INTO "public"."source_texts" VALUES ('d1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2d', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', '序章：雨夜', '冰冷的雨水拍打在陈旧的窗户上。王珂缩在角落，借着闪电的光芒，她看到那个黑影又一次出现在了巷口。', 0, '2025-10-23 17:55:37.857842+00');
+INSERT INTO "public"."source_texts" VALUES ('d1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2c', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', '第一章：下山', '清晨，雾气尚未散去，少年李慕白背着行囊，最后看了一眼山顶的茅屋，毅然转身下山。他不知道，此行将改变他的一生。', 0, '2025-10-23 17:55:37.857842+00', 'pending', NULL, 0, '第一章：下山');
+INSERT INTO "public"."source_texts" VALUES ('d1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2d', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', '序章：雨夜', '冰冷的雨水拍打在陈旧的窗户上。王珂缩在角落，借着闪电的光芒，她看到那个黑影又一次出现在了巷口。', 0, '2025-10-23 17:55:37.857842+00', 'pending', NULL, 0, '序章：雨夜');
+INSERT INTO "public"."source_texts" VALUES ('2235f7ae-93df-42fa-9450-0a08d4b97172', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', 'Untitled Chapter', '闵峙把手中厚厚的文件扔到一旁，捏着鼻梁站了起来。
+
+昨天暴雨下了一夜，到现在都还没停，雨点子直直地落到下去，窗上像是泼了水一样淅淅沥沥地淌着。
+
+透过模糊的玻璃，他看到公司门口的花坛边上站着个打着灰蓝色雨伞的男人。
+
+站了应该好一会了，裤脚都湿了大半，像是在等人。
+
+“叩叩.....”
+
+他收回视线，“进来。”
+
+一个身形修长的男人从外面走进办公室，“闵总，您找我？”
+
+见是付柏启，闵峙心绪都放松了。
+
+凭借着自己的能力，过滤了空气中的其他味道，嗅到了男人身上令他着迷的信息素。
+
+要说是甘菊味，但又不准确，更像是用甘菊的沐浴露洗了澡后，凑到衣服里去嗅那股味道，热烘烘的清淡味，只不过不知道为什么，最近一段时间这味道淡得不像话，快要闻不出了。
+
+他伸手拿过付柏启今天早上交上来的文件，“你的方案有几个地方写的不太清楚，拿回去再改改。”
+
+“是哪些地方出了问题？”
+
+距离近了之后，甘菊味的信息素更加浓郁了，除此之外，还掺杂着一种奇怪的充满攻击性的木质香，两种味道混杂在一起就有些变味。
+
+这并不奇怪，付柏启是一个优质的Alpha，这样的信息素才算正常。
+
+一般来说，Alpha的信息素不像Omega那么温和，大多都沉重具有攻击性。
+
+但闵峙很喜欢付柏启信息素的味道，不，应该说，是迷恋。
+
+几乎每一次不经意间嗅到这股味道时他都会浑身都放松下来，就连一个人待在家里的时候也总是想着。
+
+当然了，他也很喜欢付柏启，一个能力强，长相帅气也很识眼色的Alpha，一直都是他的理想伴侣。
+
+是的，Alpha伴侣。
+
+但闵峙却不是Omega，他是这个时代的超A性别者，他的两位父亲都是Alpha，因此他生来就和普通Alpha不太一样，有着比S级Alpha还要强的能力，和极具攻击性的信息素。
+
+他并不是第一例这样的人类，研究者将他们这种群体称为Enigma。
+
+他们凌驾于所有性别之上，他们具有侵略性的信息素甚至能将Alpha变成Omega，除了信息素之外，无论是智商还是体格都是比常人要优秀得多。
+
+几乎整个世界的上等阶级都有他们的身影。
+
+对于所有Enigma来说，Alpha伴侣是最好的选择，这倒是长久以来的传统了，Omega对于他们来说太过于弱小，容易伤害到他们，当然也有其他一部分原因，比如Alpha确实比Omega更能激起Enigma的欲望。
+
+所以大部分Enigma在选择伴侣时会优先选择体格较为强健的Alpha。
+
+不过仍有相当一部分Enigma会选择Omega，闵峙显然不是其中一员，他对Omega完全不感兴趣。
+
+而付柏启，S级的Alpha，却长了一张冷清又漂亮的脸，个性和他的脸一样，冷淡疏离，像高傲的天鹅，总是昂着头看人。', 0, '2025-10-25 15:58:31.956235+00', 'completed', NULL, 0, 'Untitled Chapter');
 
 -- ----------------------------
 -- Table structure for storyboards
@@ -339,6 +412,11 @@ COMMENT ON TABLE "public"."storyboards" IS '分镜规划表 (存储每个单独�
 INSERT INTO "public"."storyboards" VALUES ('e5a8a6f0-1b3a-4f5e-8d9c-0a2a3a4a5b61', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 'd1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2c', 0, '清晨，雾气尚未散去，少年李慕白背着行囊...', '年龄17岁, 男性, 身高178cm, 身材修长, 黑色长发束成马尾, 黑色眼眸犀利, 穿着朴素的蓝色武道袍, 背着一个竹制背包和一把剑', '山路, 清晨, 浓雾, 太阳刚升起(漫射光源), 安静且雾气缭绕的氛围', '中景镜头, 从背后呈四分之三角度, 聚焦于角色回望山顶', '怀旧, 依依不舍, 扭头回望, 静止站立', '漫画风格, 黑白网点, 清晰的线条, 详细的背景(山脉和雾气)', 'https://cdn.example.com/img/project_a_t1_p0.png', '2025-10-23 17:55:38.092062+00', '2025-10-24 02:19:27.170158+00', 'c0a1b2c3-1111-4f5e-8d9c-0a2a3a4a5b01');
 INSERT INTO "public"."storyboards" VALUES ('e5a8a6f0-1b3a-4f5e-8d9c-0a2a3a4a5b62', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 'd1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2c', 1, '...毅然转身下山。他不知道，此行将改变他的一生。', '年龄17岁, 男性, 身高178cm, 身材修长, 黑色长发束成马尾, 黑色眼眸犀利, 穿着朴素的蓝色武道袍, 背着一个竹制背包和一把剑', '山路, 清晨, 浓雾, 太阳刚升起(漫射光源), 安静且雾气缭绕的氛围', '全景镜头, 正面角度, 聚焦于角色向前走(朝向镜头), 动态姿势(行走中)', '坚定, 坚决, 表情严肃, 自信地大步向前', '漫画风格, 黑白网点, 清晰的线条, 强调动态的分镜构图', 'https://cdn.example.com/img/project_a_t1_p1.png', '2025-10-23 17:55:38.092062+00', '2025-10-24 02:19:27.452626+00', 'c0a1b2c3-1111-4f5e-8d9c-0a2a3a4a5b01');
 INSERT INTO "public"."storyboards" VALUES ('e5a8a6f0-1b3a-4f5e-8d9c-0a2a3a4a5b63', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', 'd1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2d', 0, '王珂缩在角落，借着闪电的光芒，她看到那个黑影又一次出现在了巷口。', '年龄22岁, 女性, 身高165cm, 中等身材, 凌乱的黑色短发, 惊恐的大眼睛, 穿着宽大的T恤和短裤, 没有配饰', '黑暗的公寓房间内, 夜晚, 雷雨, 主要光源是窗外短暂刺眼的闪电, 高对比度, 紧张的氛围', '特写镜头, 低角度(仰视角色), 聚焦于角色的脸部', '恐惧, 惊恐万分, 睁大眼睛, 用手捂住嘴巴, 蜷缩在角落', '条漫风格, 全彩, 高清晰度, 戏剧性的光照, 专注于情绪表达', 'https://cdn.example.com/img/project_b_t1_p0.png', '2025-10-23 17:55:38.092062+00', '2025-10-24 02:19:27.720621+00', 'c0a1b2c3-2222-4f5e-8d9c-0a2a3a4a5b02');
+INSERT INTO "public"."storyboards" VALUES ('9cd908ec-5457-4ec1-aef2-a39fbcfe6af3', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '2235f7ae-93df-42fa-9450-0a08d4b97172', 0, '闵峙把手中厚厚的文件扔到一旁，捏着鼻梁站了起来。昨天暴雨下了一夜，到现在都还没停，雨点子直直地落到下去，窗上像是泼了水一样淅淅沥沥地淌着。透过模糊的玻璃，他看到公司门口的花坛边上站着个打着灰蓝色雨伞的男人。', '西装领口微微皱起，袖口因雨水略显湿润，眉头紧锁，手指轻捏鼻梁，眼神透过雾蒙的玻璃凝视外面。', '雨夜的办公室，窗玻璃上布满水痕，室内灯光昏暗且带有冷白色的氛围光，雨滴的光斑在玻璃上投射出斑驳的光影。', '中景推拉镜头先捕捉闵峙抛文件的动作，随后切换到浅景深的特写，焦点从闵峙的手移至窗外的雨伞男人，构图采用对角线引导视线。', '闵峙愤怒地将文件甩到一旁，随后站起身来，捏鼻子深呼吸，眼神从愤怒转为警觉。', '写实的赛博朋克风格，色调偏冷，雨水质感细腻，光影对比强烈，营造压抑而紧张的氛围。', NULL, '2025-10-25 15:58:54.802504+00', '2025-10-25 15:58:54.802504+00', '508b462f-dff8-4499-8d94-2b00dea1dc76');
+INSERT INTO "public"."storyboards" VALUES ('5d5cdf8e-a38e-415d-babe-c57d563804fa', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '2235f7ae-93df-42fa-9450-0a08d4b97172', 1, '一个身形修长的男人从外面走进办公室，“闵总，您找我？”', '身形修长，灰蓝色雨伞已收起，西装剪裁合体，头发微湿贴在额头，冷峻的眼神直视闵峙，嘴角轻抿。', '办公室门口，雨水顺着门框滴落，屋内柔和的顶灯与窗外的雨光形成对比，地面有轻微的水光反射。', '跟随式推镜头从门口进入，随后切换为低角度的半身镜头捕捉付柏启的全身，构图采用三分法将人物置于画面左侧，背景的雨幕形成层次。', '付柏启步伐稳健，轻轻收起雨伞，抬头以平静却带有轻微挑衅的语气问候。', '高对比度的商业写实风，色调以冷灰蓝为主，雨滴细节清晰，人物轮廓锐利，突出角色的冷峻气质。', NULL, '2025-10-25 15:58:55.110384+00', '2025-10-25 15:58:55.110384+00', '659d5eb7-0a66-4eb8-90e7-35f5d8ad8ac5');
+INSERT INTO "public"."storyboards" VALUES ('36fa8209-60d0-499f-acb6-b1c50625aec9', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '2235f7ae-93df-42fa-9450-0a08d4b97172', 2, '凭借着自己的能力，过滤了空气中的其他味道，嗅到了男人身上令他着迷的信息素。要说是甘菊味，但又不准确，更像是用甘菊的沐浴露洗了澡后，凑到衣服里去嗅那股味道，热烘烘的清淡味，只不过不知道为什么，最近一段时间这味道淡得不像话，快要闻不出了。', '闭眼轻吸，眉头舒展，面部表情放松，手指轻抚文件边缘，嘴角微微上扬，显露出沉醉的神情。', '办公室内部灯光柔和，背光形成淡淡的光晕，雨声作为背景音效，空气中似有轻微的雾气渲染出嗅觉的抽象感。', '极近景特写闵峙的鼻尖和眼睛，镜头缓慢推入，背景虚化，仅保留雨滴的光斑，构图聚焦于面部细节。', '闵峙深吸一口气，眼中闪过回忆的光芒，轻轻点头表示满意。', '感官化的艺术风格，使用柔焦和光晕效果突出嗅觉的抽象表现，色调温暖与冷色雨景形成对比。', NULL, '2025-10-25 15:58:55.409682+00', '2025-10-25 15:58:55.409682+00', '508b462f-dff8-4499-8d94-2b00dea1dc76');
+INSERT INTO "public"."storyboards" VALUES ('75361a08-6713-46d8-bba9-80eb4a186dbd', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '2235f7ae-93df-42fa-9450-0a08d4b97172', 3, '他伸手拿过付柏启今天早上交上来的文件，“你的方案有几个地方写的不太清楚，拿回去再改改。”', '手指轻触文件，西装袖口微微抖动，表情严肃但带有淡淡的笑意，眼神专注。', '办公桌前的台灯投射出温暖的光柱，雨声仍在远处回响，桌面上散落几页纸张。', '两人中景，采用斜45度的侧光，构图采用对称式，闵峙位于画面左侧，付柏启位于右侧，焦点在两人手中交接的文件上。', '闵峙递文件时轻声指点，付柏启略微点头，保持冷峻的姿态。', '写实商务风格，光影柔和，色调以中性灰为主，突出人物之间的微妙张力。', NULL, '2025-10-25 15:58:55.839561+00', '2025-10-25 15:58:55.839561+00', '508b462f-dff8-4499-8d94-2b00dea1dc76');
+INSERT INTO "public"."storyboards" VALUES ('655693b0-7866-4a7f-b5a0-faa67819676b', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '2235f7ae-93df-42fa-9450-0a08d4b97172', 4, '付柏启，S级的Alpha，却长了一张冷清又漂亮的脸，个性和他的脸一样，冷淡疏离，像高傲的天鹅，总是昂着头看人。', '冷清漂亮的脸庞，眉宇如雕，眼神锐利而疏离，嘴角微抿，头略微抬起，仿佛在审视整个空间。', '办公室灯光聚焦在付柏启的面部，背后形成柔和的轮廓光，雨滴的光斑在窗帘上投射出星点般的光点。', '特写肖像，采用低角度拍摄以强化其高傲气质，构图采用中心对称，背景轻度虚化。', '付柏启保持冷淡的表情，眼神略带挑衅，轻轻抬头凝视前方。', '高对比的电影质感，色调偏冷蓝，光影锐利，突出角色的高贵与疏离感。', NULL, '2025-10-25 15:58:56.091535+00', '2025-10-25 15:58:56.091535+00', '659d5eb7-0a66-4eb8-90e7-35f5d8ad8ac5');
 
 -- ----------------------------
 -- Table structure for users
@@ -370,6 +448,9 @@ INSERT INTO "public"."users" VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'us
 INSERT INTO "public"."users" VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'user_B', 'user_b@example.com', '$2b$12$dummyhashplaceholder2', 50, '2025-10-23 17:55:37.406081+00', '2025-10-23 17:55:37.406081+00');
 INSERT INTO "public"."users" VALUES ('19602e5a-7e68-4e91-8b67-ee27d2f29bd5', 'test_user_1864', 'test_user_1864@example.com', 'test_password_hash', 0, '2025-10-24 01:37:30.692544+00', '2025-10-24 01:37:30.692544+00');
 INSERT INTO "public"."users" VALUES ('5cfa3d74-920b-4f57-9ad2-f02838b56c22', 'test_user_create', 'test_create@example.com', '$2b$12$Tew/dJ9.gg7waD9Bv.XV8us1PvcDl3jbym96kBJzw.kFUqUXnFhWe', 0, '2025-10-24 01:39:16.413759+00', '2025-10-24 01:39:16.413759+00');
+INSERT INTO "public"."users" VALUES ('20bf06fe-5cbd-4c14-94ea-6f54ca95bb70', 'test_user_22904', 'test_user_22904@example.com', '$2b$12$ciGPhTm/e2QpsQhAlLYxVekcM4FcYQmF13S//6qgzQGQtN/LQ7Or6', 0, '2025-10-24 07:28:10.851147+00', '2025-10-24 07:28:10.851147+00');
+INSERT INTO "public"."users" VALUES ('3f8f4023-9d72-4b69-a481-e5db08d91a58', 'test_user_666341', 'test_user_666341@example.com', 'test_password_hash', 0, '2025-10-25 07:04:06.872929+00', '2025-10-25 07:04:06.872929+00');
+INSERT INTO "public"."users" VALUES ('e8195641-df6b-477a-af43-d7be5981436f', '123', '123@123.com', '$2b$12$.yGbA59y5Ijn05ptFxK0ouW4i41DLR.2O1bw/t85NPdJdyT9VKFEK', 0, '2025-10-25 13:56:14.043823+00', '2025-10-25 13:56:14.043823+00');
 
 -- ----------------------------
 -- Primary Key structure for table characters
@@ -387,6 +468,14 @@ EXECUTE PROCEDURE "public"."trigger_set_timestamp"();
 -- Primary Key structure for table projects
 -- ----------------------------
 ALTER TABLE "public"."projects" ADD CONSTRAINT "projects_pkey" PRIMARY KEY ("project_id");
+
+-- ----------------------------
+-- Indexes structure for table source_texts
+-- ----------------------------
+CREATE INDEX "idx_source_texts_chapter_number" ON "public"."source_texts" USING btree (
+  "project_id" "pg_catalog"."uuid_ops" ASC NULLS LAST,
+  "chapter_number" "pg_catalog"."int4_ops" ASC NULLS LAST
+);
 
 -- ----------------------------
 -- Primary Key structure for table source_texts
@@ -444,7 +533,6 @@ ALTER TABLE "public"."source_texts" ADD CONSTRAINT "source_texts_project_id_fkey
 ALTER TABLE "public"."storyboards" ADD CONSTRAINT "storyboards_character_id_fkey" FOREIGN KEY ("character_id") REFERENCES "public"."characters" ("character_id") ON DELETE SET NULL ON UPDATE NO ACTION;
 ALTER TABLE "public"."storyboards" ADD CONSTRAINT "storyboards_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."projects" ("project_id") ON DELETE CASCADE ON UPDATE NO ACTION;
 ALTER TABLE "public"."storyboards" ADD CONSTRAINT "storyboards_source_text_id_fkey" FOREIGN KEY ("source_text_id") REFERENCES "public"."source_texts" ("text_id") ON DELETE CASCADE ON UPDATE NO ACTION;
-
 
 
 
@@ -635,9 +723,24 @@ uvicorn app.main:app --reload  # 启动API服务
 
 
 
-### 1\. 模型(LLM)需要处理和输入的数据
 
-你问到了模型需要处理哪些数据，这非常关键。你需要修改AI的提示词（Prompt），让它输出*同时*符合`characters`表和`storyboards`表结构的JSON。
+---
+
+# 常见坑 & 注意事项
+
+* uni-app 在非 H5 平台（如小程序）对 `document.elementFromPoint`、`draggable`、`dataTransfer` 支持有限；上述实现主要面向 **H5（浏览器）和移动浏览器**。若你还要兼容微信/支付宝小程序，可能需改用框架内的拖拽组件或完全基于 touch 的自实现（监听组件位置并在 touchend 时重新计算并更新数组）。
+* 如果后端提供**批量更新排序 API**（一次传所有顺序），优先使用批量接口，避免多个请求。
+* 为了更好的 UX，建议在拖拽过程中禁用页面滚动（在 touchstart 时 `document.body.style.touchAction = 'none'` 或 `overflow: hidden`，拖拽结束后恢复），否则拖拽会被滚动打断。
+
+---
+
+
+
+
+
+
+
+###模型(LLM)需要处理和输入的数据
 
 **文件**: `backend/app/services/ai_parser.py`
 
@@ -680,312 +783,492 @@ uvicorn app.main:app --reload  # 启动API服务
 
 -----
 
-### 2\. 项目中需要修改的文件
+好的，你的考虑非常周全！区分“精细化单张生成”和“批量处理”确实是商业应用中非常重要的需求，而它们对后端架构的要求（实时响应 vs. 异步处理）也确实不同。直接将两者耦合在一起（像目前这样，`parse_text` API 同步执行所有 AI 操作）会导致批量处理时性能低下且用户体验糟糕。
 
-以下是你需要重点修改的文件，以便用Cursor实现上述数据流：
+### 1\. 耦合度分析
 
-#### 后端 (Backend)
+你判断“现在耦合度还挺高”是**准确的**。主要体现在：
 
-**1. `backend/app/db/crud.py`**
+  * **单一入口点**：`POST /api/v1/parse` 承担了接收文本、调用 AI（可能耗时很久）、保存所有结果的**全部职责**，并且是**同步**执行。
+  * **AI 服务层耦合**：`ai_parser.py` 同时处理文本分段和分镜生成，这两个步骤在批量处理中可能需要分开调度。
 
-  * **职责**: 实际执行数据库操作。
-  * **修改**:
-      * **删除/弃用**: `save_storyboard` 和 `load_storyboard`。这两个函数目前错误地读写 `projects.description` 字段，必须停用。
-      * **[新增函数] `create_storyboard_panel`**:
-        ```python
-        # (你需要添加这个新函数)
-        async def create_storyboard_panel(
-            project_id: str, 
-            source_text_id: str, 
-            panel_index: int, 
-            panel_data: dict, 
-            character_id: Optional[str] = None
-        ) -> Optional[dict]:
-            """创建一条新的分镜面板记录"""
-            try:
-                storyboard_data = {
-                    "storyboard_id": str(uuid.uuid4()),
-                    "project_id": project_id,
-                    "source_text_id": source_text_id,
-                    "panel_index": panel_index,
-                    "original_text_snippet": panel_data.get("original_text_snippet"),
-                    "character_appearance": panel_data.get("character_appearance"),
-                    "scene_and_lighting": panel_data.get("scene_and_lighting"),
-                    "camera_and_composition": panel_data.get("camera_and_composition"),
-                    "expression_and_action": panel_data.get("expression_and_action"),
-                    "style_requirements": panel_data.get("style_requirements"),
-                    "character_id": character_id
-                }
-                result = await db_client.insert("storyboards", storyboard_data)
-                return result
-            except Exception as e:
-                print(f"❌ 创建分镜面板失败: {e}")
-                return None
-        ```
-      * **[新增函数] `get_storyboards_by_text_id`**:
-        ```python
-        # (你需要添加这个新函数)
-        async def get_storyboards_by_text_id(text_id: str) -> List[dict]:
-            """根据 source_text_id 获取所有分镜面板，按索引排序"""
-            try:
-                # Supabase/PostgREST的 .order() 需要在 client.py 中支持，
-                # 如果 client.py 不支持 order，一个简单的 select 也可以，后续在Python中排序
-                # 假设 client.py 的 select 支持 order (如果不支持，就需要修改 client.py)
-                # 
-                # 临时的简单实现 (如果 client.py 不支持排序):
-                results = await db_client.select(
-                    "storyboards",
-                    filters={"source_text_id": text_id}
-                )
-                # 在Python中排序
-                results.sort(key=lambda x: x.get('panel_index', 0))
-                return results
-            except Exception as e:
-                print(f"❌ 获取分镜列表失败: {e}")
-                return []
-        ```
-      * **[新增函数] `update_storyboard_panel`**:
-        ```python
-        # (你需要添加这个新函数)
-        async def update_storyboard_panel(storyboard_id: str, updates: dict) -> bool:
-            """更新单个分镜面板"""
-            try:
-                # 清理掉主键，防止更新主键
-                if "storyboard_id" in updates:
-                    del updates["storyboard_id"]
-                
-                await db_client.update(
-                    "storyboards",
-                    updates,
-                    {"storyboard_id": storyboard_id}
-                )
-                return True
-            except Exception as e:
-                print(f"❌ 更新分镜面板失败: {e}")
-                return False
-        ```
+### 2\. 对你提供的“解耦方案”的评估
 
-**2. `backend/app/services/ai_parser.py`**
+你提供的解耦方案非常专业，它提出了几个核心且正确的思想：
 
-  * **职责**: 调用 LLM 并返回标准 JSON。
-  * **修改**:
-      * **`generate_storyboard_for_segment`**: 修改此函数中的 `messages` (Prompt)，要求AI严格按照我上面提供的 **"LLM (AI) 的输出JSON格式（建议）"** 返回数据（包含`characters`和`storyboards`列表）。
-      * **`call_qiniu_api`**: 确保它能正确解析LLM返回的JSON。
+  * **分层与职责单一**：将处理流程拆分为独立组件（Preprocessor, SceneSplitter, PromptAssembler, Adapters 等）。✅ **可取**
+  * **接口优先 (Adapter Pattern)**：封装外部依赖（LLM, 图像服务, 存储）。✅ **可取**
+  * **消息驱动（队列）**：将耗时任务（AI 处理、图像生成）放入消息队列异步处理。✅ **非常可取，是解耦关键**
+  * **明确的作业契约 (JSON)**：定义标准化的消息格式。✅ **可取**
+  * **数据库模型（`processing_jobs`, `job_chunks`, `image_jobs`）**：为异步任务和状态管理设计了专门的表。✅ **功能强大，但增加了数据库复杂度**
 
-**3. `backend/app/api/storyboard.py`**
+**评价：**
+这个方案是一个**非常理想的、面向大规模批量处理的最终架构**。它的优点是**彻底解耦、状态清晰、可扩展性强**。
 
-  * **职责**: 暴露 HTTP 接口给前端。
-  * **修改**:
-      * **`parse_text` (POST `/api/v1/parse`)**:
-        1.  确保已导入 `create_source_text`, `create_character`, `create_storyboard_panel`。
-        2.  **(新增)** 调用 `create_source_text` 保存原文，获取 `text_id`。
-        3.  调用 `ai_parser.py` 获取AI的JSON（`{"characters": ..., "storyboards": ...}`）。
-        4.  **(新增)** 创建一个字典 `name_to_id_map = {}`。
-        5.  **(新增)** 遍历 `response['characters']`：
-              * 调用 `create_character` 保存角色。
-              * 将返回的 `character_id` 存入 `name_to_id_map[char['name']] = new_char_id`。
-        6.  **(修改)** 替换掉旧的 `save_storyboard` 逻辑。
-        7.  **(新增)** 遍历 `response['storyboards']` (带 `i` 索引)：
-              * `char_name = panel.get("character_name")`
-              * `char_id = name_to_id_map.get(char_name)` (如果找不到就是 `None`)
-              * 调用 `create_storyboard_panel(project_id=req.project_id, source_text_id=text_id, panel_index=i, panel_data=panel, character_id=char_id)`。
-        8.  **(修改)** `return` 语句：必须返回 `{"ok": True, "project_id": req.project_id, "text_id": text_id}`。
-      * **`save_storyboard_endpoint` (POST `/api/v1/save-storyboard`)**:
-          * 这个接口的逻辑是错的（保存到`projects`表），建议**删除**。
-      * **[新增API] `get_storyboards` (GET `/api/v1/storyboards`)**:
-        ```python
-        # (你需要添加这个新API)
-        from fastapi import Query
+但正如你所说，它的**缺点**也很明显：**实现复杂，需要新建数据库表，并且对于你当前优先跑通“精细化单张生成”的目标来说，可能引入了过多的前期工作量**。特别是新增的三张表 (`processing_jobs`, `job_chunks`, `image_jobs`)，虽然对批量作业管理很有帮助，但与你“尽量不要改动数据库”的要求相悖。
 
-        @router.get("/api/v1/storyboards", tags=["Storyboard"])
-        async def get_storyboards(text_id: str = Query(...)):
-            """根据 text_id 获取分镜面板列表"""
-            if not db_client.is_connected:
-                raise HTTPException(status_code=500, detail="数据库未连接")
-            try:
-                panels = await get_storyboards_by_text_id(text_id)
-                return {"ok": True, "storyboards": panels}
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"获取分镜失败: {str(e)}")
-        ```
-      * **[新增API] `update_storyboard` (PUT `/api/v1/storyboard/{storyboard_id}`)**:
-        ```python
-        # (你需要添加这个新API)
-        from pydantic import BaseModel
+### 3\. 优先跑通“精细化”并为“批量”预留空间的解耦方案 (最小数据库改动)
 
-        class StoryboardPanelUpdate(BaseModel):
-            # 定义允许前端修改的字段
-            original_text_snippet: Optional[str] = None
-            character_appearance: Optional[str] = None
-            scene_and_lighting: Optional[str] = None
-            camera_and_composition: Optional[str] = None
-            expression_and_action: Optional[str] = None
-            style_requirements: Optional[str] = None
-            character_id: Optional[str] = None
+我们可以借鉴你方案中的**核心思想（异步处理、分层）**，但采用一种更**轻量级、对现有数据库改动最小**的方式，先满足“精tfine化”需求，同时为“批量”打好基础。
 
-        @router.put("/api/v1/storyboard/{storyboard_id}", tags=["Storyboard"])
-        async def update_storyboard(storyboard_id: str, updates: StoryboardPanelUpdate):
-            """更新单个分镜面板"""
-            if not db_client.is_connected:
-                raise HTTPException(status_code=500, detail="数据库未连接")
-            try:
-                # .dict(exclude_unset=True) 确保只更新传入的字段
-                success = await update_storyboard_panel(storyboard_id, updates.dict(exclude_unset=True))
-                if success:
-                    return {"ok": True, "message": "更新成功"}
-                else:
-                    raise HTTPException(status_code=500, detail="更新失败")
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"更新失败: {str(e)}")
-        ```
+**核心思路：** 将 AI 处理移至后台，API 快速响应。
 
------
+**步骤与代码修改建议：**
 
-#### 前端 (Frontend)
+**(1) 最小数据库改动：为 `source_texts` 表增加状态字段**
 
-**1. `frontend/pages/storyboard/script-analyzer.vue`**
+你只需要给 `source_texts` 表增加一个字段来跟踪处理状态。
 
-  * **职责**: 收集文本，调用解析API，然后跳转。
-  * **修改**:
-      * `data()`: 确保 `project_id` 可以从 `onLoad` (如果从项目列表页跳转过来) 或 `authManager` (如果存在) 中获取。
-      * `submitText()`:
-          * 修改 `uni.request` 的 `data`，**必须**包含 `project_id: this.project_id`。
-          * 修改 `success` 回调中的跳转逻辑：
-            ```javascript
-            // [旧代码]
-            // uni.navigateTo({
-            //   url: `/pages/storyboard/layout-planner?storyboard=${encodeURIComponent(JSON.stringify(response.data.storyboard))}`
-            // })
+```sql
+-- 只需要执行这个 ALTER TABLE 语句
+ALTER TABLE "public"."source_texts"
+ADD COLUMN "processing_status" VARCHAR(32) DEFAULT 'pending'; -- 可能的状态: pending, processing, completed, failed
 
-            // [新代码]
-            if (response.data.ok) {
-              uni.showToast({ title: '生成成功！准备跳转...', icon: 'success' });
-              setTimeout(() => {
-                uni.navigateTo({
-                  url: `/pages/storyboard/layout-planner?project_id=${response.data.project_id}&text_id=${response.data.text_id}`
-                })
-              }, 1500)
+-- (可选) 添加一个字段存储错误信息
+ALTER TABLE "public"."source_texts"
+ADD COLUMN "error_message" TEXT;
+
+-- 更新注释
+COMMENT ON COLUMN "public"."source_texts"."processing_status" IS 'AI处理状态 (pending, processing, completed, failed)';
+COMMENT ON COLUMN "public"."source_texts"."error_message" IS '处理失败时的错误信息';
+```
+
+**(2) 修改后端 `api/storyboard.py`：使用后台任务**
+
+  * 引入 FastAPI 的 `BackgroundTasks`。
+  * `parse_text` 接口不再同步调用 AI，而是启动一个后台任务。
+
+<!-- end list -->
+
+```python
+# backend/app/api/storyboard.py
+from fastapi import APIRouter, HTTPException, Query, BackgroundTasks # <--- 新增导入 BackgroundTasks
+from pydantic import BaseModel
+# ... 其他导入 ...
+from app.db import (
+    # ... 保留现有导入 ...
+    update_source_text_status # <--- 需要在 crud.py 中新增这个函数
+)
+
+# ... (ParseRequest 定义不变) ...
+
+# === 新增：后台处理函数 ===
+async def process_text_background(
+    project_id: str,
+    text_id: str,
+    text_content: str,
+    title: Optional[str]
+):
+    """后台执行 AI 解析和数据库保存"""
+    print(f"🔄(Background) 开始处理 text_id: {text_id}")
+    try:
+        # 标记状态为 processing
+        await update_source_text_status(text_id, 'processing') # <--- 更新状态
+
+        # --- 这里是原来 parse_text 中的核心 AI 处理逻辑 ---
+        # 1. 获取已存在角色
+        existing_db_chars = await get_characters_by_project(project_id)
+        existing_char_list_for_ai = [{"name": c.name, "description": c.description} for c in existing_db_chars]
+        name_to_id_map = {c.name: c.character_id for c in existing_db_chars}
+        print(f"   (BG) 找到 {len(existing_db_chars)} 个已存在角色")
+
+        # 2. 调用 AI (这里简化，假设没有分段逻辑，或者分段逻辑也包含在此)
+        #    TODO: 在这里完善长文本分段合并逻辑
+        print(f"   (BG) 调用 AI 服务...")
+        ai_response = await ai_parser.generate_storyboard_for_segment(
+            segment_text=text_content,
+            title=title,
+            segment_index=1,
+            existing_characters=existing_char_list_for_ai
+        )
+        print(f"   (BG) AI 处理完成")
+
+        # 3. 保存新角色
+        if ai_response.get("characters"):
+            print(f"   (BG) 保存新角色...")
+            for char_data in ai_response["characters"]:
+                char_name = char_data.get("name")
+                if char_name and char_name not in name_to_id_map:
+                    new_char = await create_character(project_id, char_name, char_data.get("description"))
+                    if new_char:
+                        name_to_id_map[new_char.name] = new_char.character_id
+        
+        # 4. 保存分镜面板
+        if ai_response.get("storyboards"):
+            print(f"   (BG) 保存分镜面板...")
+            for i, panel_data in enumerate(ai_response["storyboards"]):
+                char_name = panel_data.get("character_name")
+                char_id = name_to_id_map.get(char_name)
+                await create_storyboard_panel(project_id, text_id, i, panel_data, char_id)
+        # --- AI 处理逻辑结束 ---
+
+        # 标记状态为 completed
+        await update_source_text_status(text_id, 'completed') # <--- 更新状态
+        print(f"✅(Background) 处理完成 text_id: {text_id}")
+
+    except Exception as e:
+        print(f"❌(Background) 处理失败 text_id: {text_id}: {e}")
+        import traceback
+        error_msg = traceback.format_exc()
+        # 标记状态为 failed 并记录错误
+        await update_source_text_status(text_id, 'failed', error_msg) # <--- 更新状态
+
+# === 修改 parse_text 接口 ===
+@router.post("/api/v1/parse", tags=["Storyboard"])
+async def parse_text(req: ParseRequest, background_tasks: BackgroundTasks): # <--- 注入 BackgroundTasks
+    print(f"📖(API) 收到解析请求 (将后台处理):")
+    # ... (打印日志) ...
+    if not db_client.is_connected: # <--- 数据库连接检查
+        raise HTTPException(status_code=500, detail="数据库未连接")
+    if not req.project_id:
+        raise HTTPException(status_code=400, detail="项目ID不能为空")
+
+    try:
+        # 1. 保存原文 (状态默认为 pending)
+        print(f"   (API) 保存原文...")
+        source_text = await create_source_text(
+            project_id=req.project_id,
+            title=req.title or "Untitled Chapter",
+            raw_content=req.text
+        )
+        if not source_text:
+            raise HTTPException(status_code=500, detail="保存原文失败")
+        text_id = source_text.text_id
+        print(f"   (API) 原文保存成功, text_id: {text_id}, 状态: pending")
+
+        # 2. [关键] 将耗时任务添加到后台
+        print(f"   (API) 添加到后台任务队列...")
+        background_tasks.add_task(
+            process_text_background,
+            req.project_id,
+            text_id,
+            req.text,
+            req.title
+        )
+
+        # 3. [关键] 立即返回响应给前端
+        print(f"   (API) 立即返回响应...")
+        return {
+            "ok": True,
+            "message": "已接收处理请求，正在后台生成...",
+            "project_id": req.project_id,
+            "text_id": text_id
+        }
+
+    except Exception as e:
+        print(f"❌(API) 接收解析请求失败: {e}")
+        raise HTTPException(status_code=500, detail=f"请求处理失败: {str(e)}")
+
+
+# === 新增：获取处理状态的 API ===
+@router.get("/api/v1/source_text_status/{text_id}", tags=["Storyboard"])
+async def get_source_text_status(text_id: str):
+    print(f"❓(API) 查询状态: {text_id}")
+    if not db_client.is_connected:
+        raise HTTPException(status_code=500, detail="数据库未连接")
+    try:
+        # 需要在 crud.py 中添加 get_source_text_by_id 函数
+        from app.db import get_source_text_by_id 
+        source_text = await get_source_text_by_id(text_id) # <--- 需要新增此 crud 函数
+        if not source_text:
+            raise HTTPException(status_code=404, detail="未找到该文本")
+        
+        return {
+            "ok": True,
+            "text_id": text_id,
+            "status": source_text.processing_status, # <--- 返回状态
+            "error": source_text.error_message if source_text.processing_status == 'failed' else None
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"查询状态失败: {str(e)}")
+
+# === 新增：删除分镜面板的 API ===
+@router.delete("/api/v1/storyboard/{storyboard_id}", tags=["Storyboard"])
+async def delete_storyboard(storyboard_id: str):
+    """删除单个分镜面板"""
+    print(f"🗑️(API) 删除分镜面板: {storyboard_id}")
+    if not db_client.is_connected:
+        raise HTTPException(status_code=500, detail="数据库未连接")
+    try:
+        from app.db import delete_storyboard_panel # <--- crud.py 中已存在此函数
+        success = await delete_storyboard_panel(storyboard_id)
+        if success:
+            return {"ok": True, "message": "删除成功"}
+        else:
+            # 可能未找到或删除失败
+            raise HTTPException(status_code=404, detail="未找到或删除失败")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除失败: {str(e)}")
+
+# ... (get_storyboards 和 update_storyboard 接口保持不变) ...
+```
+
+**(3) 修改后端 `db/crud.py`：配合状态管理**
+
+```python
+# backend/app/db/crud.py
+# ... 其他导入 ...
+
+# === 新增函数 ===
+async def update_source_text_status(text_id: str, status: str, error_message: Optional[str] = None):
+    """更新 source_texts 表的处理状态和错误信息"""
+    try:
+        updates = {"processing_status": status}
+        if error_message:
+            updates["error_message"] = error_message
+        await db_client.update(
+            TableNames.SOURCE_TEXTS,
+            updates,
+            {SourceTextFields.TEXT_ID: text_id}
+        )
+        print(f"   (DB) 更新 text_id {text_id} 状态为: {status}")
+    except Exception as e:
+        print(f"❌ 更新状态失败 text_id {text_id}: {e}")
+
+async def get_source_text_by_id(text_id: str) -> Optional[SourceText]:
+    """根据ID获取原文"""
+    try:
+        results = await db_client.select(
+            TableNames.SOURCE_TEXTS,
+            filters={SourceTextFields.TEXT_ID: text_id}
+        )
+        if results:
+            # 手动添加 status 和 error 字段到模型（如果模型定义没更新）
+            data = results[0]
+            st = SourceText.from_dict(data)
+            st.processing_status = data.get("processing_status", "pending") # <---
+            st.error_message = data.get("error_message") # <---
+            return st
+        return None
+    except Exception as e:
+        print(f"❌ 获取原文失败: {e}")
+        return None
+        
+# ... (其他函数保持不变，确保 delete_storyboard_panel 已存在) ...
+```
+
+**(4) 修改前端 `script-analyzer.vue`：处理异步流程**
+
+  * `submitText()` 不再直接跳转，而是开始轮询状态。
+  * 添加轮询逻辑。
+
+<!-- end list -->
+
+```javascript
+// frontend/pages/storyboard/script-analyzer.vue
+export default {
+  data() {
+    return {
+      // ... (现有 data) ...
+      pollingInterval: null,
+      currentTextId: null
+    }
+  },
+  onUnload() {
+    // 页面卸载时清除定时器
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+  },
+  methods: {
+    // ... (goBack, chooseFile, readFileContent 不变) ...
+    
+    async submitText() {
+      // ... (前端验证不变) ...
+      this.loading = true;
+      this.result = null; // 清除旧结果显示
+      this.currentTextId = null; // 清除旧 ID
+      if (this.pollingInterval) clearInterval(this.pollingInterval); // 清除旧轮询
+
+      try {
+        const response = await uni.request({
+          url: 'http://localhost:8000/api/v1/parse',
+          method: 'POST',
+          header: { 'Content-Type': 'application/json' },
+          data: {
+            title: this.title,
+            text: this.text,
+            project_id: this.projectId
+          }
+        });
+
+        if (response.statusCode === 200 && response.data.ok) {
+          uni.showToast({ title: '已提交后台处理...', icon: 'loading', duration: 2000 });
+          this.currentTextId = response.data.text_id;
+          this.startPollingStatus(response.data.text_id, response.data.project_id); // <--- 开始轮询
+        } else {
+          throw new Error(response.data.detail || `HTTP ${response.statusCode}`);
+        }
+      } catch (error) {
+        console.error('Submit failed:', error);
+        uni.showToast({ title: '提交失败：' + error.message, icon: 'none' });
+        this.loading = false; // 出错时停止 loading
+      } 
+      // 注意：finally 不再设置 loading = false，由轮询结束时设置
+    },
+
+    startPollingStatus(textId, projectId) {
+      this.loading = true; // 保持 loading 状态
+      this.pollingInterval = setInterval(async () => {
+        try {
+          const statusRes = await uni.request({
+            url: `http://localhost:8000/api/v1/source_text_status/${textId}`,
+            method: 'GET'
+          });
+
+          if (statusRes.statusCode === 200 && statusRes.data.ok) {
+            const status = statusRes.data.status;
+            if (status === 'completed') {
+              clearInterval(this.pollingInterval);
+              this.pollingInterval = null;
+              this.loading = false;
+              uni.showToast({ title: '处理完成！', icon: 'success' });
+              // 跳转
+              uni.navigateTo({
+                url: `/pages/storyboard/layout-planner-new?project_id=${projectId}&text_id=${textId}` // <--- 确保是新页面
+              });
+            } else if (status === 'failed') {
+              clearInterval(this.pollingInterval);
+              this.pollingInterval = null;
+              this.loading = false;
+              uni.showModal({
+                  title: '处理失败',
+                  content: statusRes.data.error || '未知错误',
+                  showCancel: false
+              });
             } else {
-              // 处理错误
+              // 'pending' 或 'processing'，继续轮询
+              console.log(`Polling status: ${status}`);
             }
-            ```
+          } else {
+            // 查询状态接口本身出错
+             throw new Error('无法获取状态');
+          }
+        } catch (pollError) {
+          clearInterval(this.pollingInterval);
+          this.pollingInterval = null;
+          this.loading = false;
+          uni.showToast({ title: '查询状态失败: ' + pollError.message, icon: 'none' });
+        }
+      }, 3000); // 每 3 秒轮询一次
+    }
+  }
+}
+```
 
-**2. `frontend/pages/storyboard/layout-planner.vue`**
+**(5) 修改前端 `layout-planner-new.vue`：添加删除逻辑**
 
-  * **职责**: (关键页面) 加载、显示、编辑分镜面板。
-  * **修改 (这块改动最大)**:
-      * `data()`:
-          * `pages: []` -\> **`panels: []`** (数据结构必须改变，以匹配数据库)。
-          * `projectId: null` (保留)。
-          * **(新增)** `textId: null`。
-      * `onLoad(options)`:
-          * **删除** `options.storyboard` 的所有相关逻辑。
-          * **替换** `loadExistingStoryboard` 的逻辑。
-          * **(新增)**
-            ```javascript
-            onLoad(options) {
-              if (options.project_id && options.text_id) {
-                this.projectId = options.project_id;
-                this.textId = options.text_id;
-                this.loadPanelsData(); // 调用新的加载函数
+```javascript
+// frontend/pages/storyboard/layout-planner-new.vue
+export default {
+  // ... (data, onLoad, loadPanelsData, editPanel, savePanel, closeModal, goBack) ...
+  methods: {
+    // ...
+    async deletePanel(panelIndex) { // <--- 改为 async
+      const panelToDelete = this.panels[panelIndex];
+      const panelId = panelToDelete.storyboard_id;
+
+      uni.showModal({
+        title: '确认删除',
+        content: `确定要删除面板 ${panelToDelete.panel_index + 1} 吗？`,
+        success: async (res) => { // <--- 改为 async
+          if (res.confirm) {
+            uni.showLoading({ title: '删除中...' });
+            try {
+              const response = await uni.request({
+                url: `http://localhost:8000/api/v1/storyboard/${panelId}`,
+                method: 'DELETE' // <--- 使用 DELETE 方法
+              });
+
+              if (response.statusCode === 200 && response.data.ok) {
+                this.panels.splice(panelIndex, 1);
+                // 可选：重新编排 panel_index (如果后端不处理的话)
+                this.panels.forEach((p, i) => p.panel_index = i);
+                uni.showToast({ title: '删除成功', icon: 'success' });
               } else {
-                uni.showToast({ title: '缺少项目或文本ID', icon: 'none' });
-                // ...返回逻辑
+                throw new Error(response.data.detail || '删除失败');
               }
+            } catch (e) {
+              uni.showToast({ title: e.message || '删除失败', icon: 'none' });
+            } finally {
+              uni.hideLoading();
             }
-            ```
-      * **[新增方法] `loadPanelsData`**:
-        ```javascript
-        async loadPanelsData() {
-          this.isLoading = true;
-          uni.showLoading({ title: '加载分镜中...' });
-          try {
-            const response = await uni.request({
-              url: `http://localhost:8000/api/v1/storyboards?text_id=${this.textId}`,
-              method: 'GET'
-            });
-            if (response.statusCode === 200 && response.data.ok) {
-              this.panels = response.data.storyboards; // 将数据存入 panels
-              this.hasUnsavedChanges = false;
-            } else {
-              throw new Error('加载失败');
-            }
-          } catch (e) {
-            uni.showToast({ title: e.message || '加载数据失败', icon: 'none' });
-          } finally {
-            this.isLoading = false;
-            uni.hideLoading();
           }
         }
-        ```
-      * **Template (HTML部分)**:
-          * 你必须**重构**模板。删除 `v-for="(page, pageIndex) in pages"` 的外层循环。
-          * **替换**为一层循环： `v-for="(panel, panelIndex) in panels" :key="panel.storyboard_id"`。
-          * 模板中所有对 `page.panels` 的引用都应改为 `panel`。
-      * `editPanel(pageIndex, panelIndex)` -\> `editPanel(panelIndex)`:
-          * `const panel = this.panels[panelIndex]`
-          * `this.editingPanelIndex = panelIndex`
-          * `(重要)` `this.editingPanel = { ...panel }` (复制所有字段，包括`storyboard_id`)。
-      * `savePanel()` (保存单个面板的弹窗):
-          * **(重要)** 这是你说的“允许用户修改”的核心。
-          * 调用新的 `PUT` 接口：
-            ```javascript
-            async savePanel() {
-              const panelToSave = this.editingPanel;
-              const panelId = panelToSave.storyboard_id;
-              
-              // (...前端验证...)
-              
-              // 从 editingPanel 中提取需要更新的字段
-              const updates = {
-                original_text_snippet: panelToSave.original_text_snippet,
-                character_appearance: panelToSave.character_appearance,
-                scene_and_lighting: panelToSave.scene_and_lighting,
-                camera_and_composition: panelToSave.camera_and_composition,
-                expression_and_action: panelToSave.expression_and_action,
-                style_requirements: panelToSave.style_requirements
-                // 注意：这里也应该允许修改 character_id，但这需要一个下拉框
-              };
+      });
+    },
+    // ...
+  }
+}
+```
 
-              try {
-                const response = await uni.request({
-                  url: `http://localhost:8000/api/v1/storyboard/${panelId}`,
-                  method: 'PUT',
-                  data: updates
-                });
-                
-                if (response.statusCode === 200 && response.data.ok) {
-                  // 更新本地数据
-                  this.panels[this.editingPanelIndex] = { ...panelToSave };
-                  uni.showToast({ title: '保存成功', icon: 'success' });
-                  this.closeModal();
-                } else {
-                  throw new Error('保存失败');
-                }
-              } catch (e) {
-                uni.showToast({ title: e.message || '保存失败', icon: 'none' });
-              }
-            }
-            ```
-      * `saveStoryboardToDatabase()`: 这个“全部保存”按钮的逻辑现在是错的。你可以**暂时禁用或删除**它，因为 `savePanel` 已经实现了保存。
+**(6) 完善长文本分段合并逻辑**
 
-**3. `frontend/pages/projects/list.vue`**
+在 `process_text_background` 函数内部，你需要加入处理 `segments` 的循环。
 
-  * **职责**: 显示项目列表。
-  * **修改**:
-      * `editStoryboard(project)`: 这个方法目前是跳转到 `layout-planner`，但它没有 `text_id`。
-      * **(建议)** 这个按钮不应该叫“编辑分镜”，而应该叫“**查看章节**”。点击后应该跳转到一个*新的*页面（例如 `pages/projects/detail.vue`），该页面显示该项目（`project_id`）下的所有`source_texts`（章节列表）。当用户点击*某个章节*时，才跳转到 `layout-planner` 并传入`project_id`和`text_id`。
-      * **(临时修复)** 如果你不想创建新页面，那么 `editStoryboard(project)` 应该**跳转到 `script-analyzer.vue`** 并传入 `project_id`，让用户 *先* 上传或选择章节文本。
-        ```javascript
-        editStoryboard(project) {
-          // 错误:
-          // uni.navigateTo({
-          //   url: `/pages/storyboard/layout-planner?project_id=${project.project_id}`
-          // })
-          
-          // 正确 (临时):
-          uni.navigateTo({
-            url: `/pages/storyboard/script-analyzer?project_id=${project.project_id}`
-          })
-        }
-        ```
+```python
+# backend/app/api/storyboard.py -> process_text_background 函数内部
+
+        # --- 这里是原来 parse_text 中的核心 AI 处理逻辑 ---
+        # 1. 获取已存在角色 (不变)
+        existing_db_chars = await get_characters_by_project(project_id)
+        existing_char_list_for_ai = [{"name": c.name, "description": c.description} for c in existing_db_chars]
+        name_to_id_map = {c.name: c.character_id for c in existing_db_chars}
+        print(f"   (BG) 找到 {len(existing_db_chars)} 个已存在角色")
+
+        # 2. [修改] 处理分段或单段
+        all_new_characters_from_ai = []
+        all_storyboards_from_ai = []
+        
+        # 决定是否需要分段 (可以在这里加一个简单的字数判断)
+        needs_segmentation = len(text_content) > 1500 # 举例：超过1500字则分段
+
+        if needs_segmentation:
+            print(f"   (BG) 长文本，开始分段处理...")
+            segments = await ai_parser.segment_text(text_content, existing_char_list_for_ai) # ai_parser.segment_text 也需要接收 existing_chars
+            print(f"   (BG) 分段完成，共 {len(segments)} 段")
+
+            for i, segment in enumerate(segments):
+                print(f"   (BG) 处理第 {i+1}/{len(segments)} 段...")
+                ai_response_segment = await ai_parser.generate_storyboard_for_segment(
+                    segment["content"], title, i + 1, existing_char_list_for_ai
+                )
+                all_new_characters_from_ai.extend(ai_response_segment.get("characters", []))
+                all_storyboards_from_ai.extend(ai_response_segment.get("storyboards", []))
+                print(f"   (BG) 第 {i+1} 段完成")
+        else:
+            print(f"   (BG) 短文本，直接处理...")
+            ai_response_single = await ai_parser.generate_storyboard_for_segment(
+                text_content, title, 1, existing_char_list_for_ai
+            )
+            all_new_characters_from_ai = ai_response_single.get("characters", [])
+            all_storyboards_from_ai = ai_response_single.get("storyboards", [])
+
+        print(f"   (BG) AI 处理完成，共识别 {len(all_new_characters_from_ai)} 个新角色，生成 {len(all_storyboards_from_ai)} 个分镜面板")
+
+        # 3. 保存新角色 (使用 all_new_characters_from_ai)
+        if all_new_characters_from_ai:
+             # ... (循环保存逻辑不变) ...
+        
+        # 4. 保存分镜面板 (使用 all_storyboards_from_ai)
+        if all_storyboards_from_ai:
+            # ... (循环保存逻辑不变，确保 panel_index=i 正确) ...
+        # --- AI 处理逻辑结束 ---
+        
+        # ... (更新状态为 completed) ...
+```
+
+**预留批量处理空间：**
+这个异步方案已经为批量处理打好了基础。未来你可以：
+
+  * 创建一个 `POST /api/v1/parse_batch` 接口，接收多个文件。
+  * 这个接口循环处理每个文件，为每个文件创建一个 `source_texts` 记录 (状态 `pending`)，并为每个文件启动一个 `process_text_background` 后台任务。
+  * 前端可以通过项目详情页或章节列表页查询所有 `source_texts` 的状态。
+
+这个方案既满足了你当前优先完成“精细化”同步流程的需求（通过后台任务快速响应），又通过引入状态管理和后台处理，极大地降低了与未来“批量处理”功能的耦合度，且数据库改动最小。
+
+
+
+
+

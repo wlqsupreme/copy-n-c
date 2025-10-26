@@ -70,16 +70,20 @@
         </view>
 
         <view class="form-options">
-          <view class="agree-terms">
-            <checkbox v-model="agreeTerms" />
+          <view class="agree-terms" @click="toggleTerms">
+            <view class="checkbox-wrapper">
+              <view class="custom-checkbox" :class="{ 'checked': agreeTerms }">
+                <text class="checkmark" v-if="agreeTerms">✓</text>
+              </view>
+            </view>
             <text class="option-text">我同意</text>
-            <text class="terms-link" @click="showTerms">《用户协议》</text>
+            <text class="terms-link" @click.stop="showTerms">《用户协议》</text>
             <text class="option-text">和</text>
-            <text class="terms-link" @click="showPrivacy">《隐私政策》</text>
+            <text class="terms-link" @click.stop="showPrivacy">《隐私政策》</text>
           </view>
         </view>
 
-        <button class="register-btn" @click="handleRegister" :disabled="isLoading || !agreeTerms">
+        <button class="register-btn" @click="handleRegister" :disabled="!isFormValid" :class="{ 'enabled': isFormValid }">
           <text v-if="isLoading">注册中...</text>
           <text v-else>创建账户</text>
         </button>
@@ -126,9 +130,33 @@ export default {
     }
   },
   
+  computed: {
+    isFormValid() {
+      // 简单直接的验证逻辑
+      const username = this.registerForm.username
+      const email = this.registerForm.email
+      const password = this.registerForm.password
+      const confirmPassword = this.registerForm.confirmPassword
+      
+      // 基本检查
+      const usernameOk = username && username.length >= 3
+      const emailOk = email && this.isValidEmail(email)
+      const passwordOk = password && password.length >= 6
+      const confirmPasswordOk = confirmPassword && password === confirmPassword
+      const termsOk = this.agreeTerms
+      
+      return usernameOk && emailOk && passwordOk && confirmPasswordOk && termsOk && !this.isLoading
+    }
+  },
+  
   methods: {
     goBack() {
       uni.navigateBack()
+    },
+    
+    toggleTerms() {
+      this.agreeTerms = !this.agreeTerms
+      console.log('条款勾选状态切换为:', this.agreeTerms)
     },
     
     goToLogin() {
@@ -379,6 +407,34 @@ export default {
   align-items: center;
   gap: 10rpx;
   flex-wrap: wrap;
+  cursor: pointer;
+}
+
+.checkbox-wrapper {
+  margin-right: 16rpx;
+}
+
+.custom-checkbox {
+  width: 32rpx;
+  height: 32rpx;
+  border: 2rpx solid #ddd;
+  border-radius: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fff;
+  transition: all 0.3s ease;
+}
+
+.custom-checkbox.checked {
+  background-color: #007aff;
+  border-color: #007aff;
+}
+
+.checkmark {
+  color: #fff;
+  font-size: 20rpx;
+  font-weight: bold;
 }
 
 .option-text {
@@ -391,6 +447,39 @@ export default {
   color: #667eea;
   cursor: pointer;
   text-decoration: underline;
+}
+
+.validation-hints {
+  margin-top: 30rpx;
+  padding: 20rpx;
+  background-color: #f8f9fa;
+  border-radius: 8rpx;
+  border-left: 4rpx solid #667eea;
+}
+
+.hint-title {
+  font-size: 24rpx;
+  color: #333333;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 15rpx;
+}
+
+.hint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.hint-item {
+  font-size: 22rpx;
+  color: #666666;
+  display: block;
+  transition: color 0.3s ease;
+}
+
+.hint-item.valid {
+  color: #28a745;
 }
 
 .register-btn {
@@ -408,6 +497,12 @@ export default {
 
 .register-btn:disabled {
   opacity: 0.6;
+  background-color: #cccccc;
+}
+
+.register-btn.enabled {
+  opacity: 1;
+  background-color: #000000;
 }
 
 .divider {

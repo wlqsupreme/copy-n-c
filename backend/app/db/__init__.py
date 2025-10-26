@@ -14,7 +14,7 @@ from .crud import (
     # 项目操作
     create_project, get_project_by_id, get_projects_by_user, update_project, delete_project,
     # 原文操作
-    create_source_text, get_source_texts_by_project,
+    create_source_text, get_source_texts_by_project, update_source_text_status, update_source_text, get_source_text_by_id,
     # 分镜操作
     create_storyboard_panel, get_storyboards_by_text_id, update_storyboard_panel, get_storyboard_by_id, delete_storyboard_panel,
     # 角色操作
@@ -32,7 +32,7 @@ __all__ = [
     # CRUD操作
     'create_user', 'get_user_by_id', 'get_user_by_username', 'get_user_by_email', 'update_user_credit',
     'create_project', 'get_project_by_id', 'get_projects_by_user', 'update_project', 'delete_project',
-    'create_source_text', 'get_source_texts_by_project',
+    'create_source_text', 'get_source_texts_by_project', 'update_source_text_status', 'update_source_text', 'get_source_text_by_id',
     'create_storyboard_panel', 'get_storyboards_by_text_id', 'update_storyboard_panel', 'get_storyboard_by_id', 'delete_storyboard_panel',
     'create_character', 'get_characters_by_project', 'update_character', 'delete_character',
     'get_public_projects', 'search_projects', 'get_user_stats'

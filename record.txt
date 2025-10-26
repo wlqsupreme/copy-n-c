@@ -1,0 +1,159 @@
+问：
+我的项目页面@list.vue 在创建一个项目之后，如果选择了单张导入的话，下面的按钮应该是
+导入单章小说原文、编辑分镜描述、最后一个是删除按钮不用变
+点击导入单张小说原文之后跳转的是导入原文页面@script-analyzer.vue ，这个页面应该在上面加上必填项第几章和章节名称 ，以及对应的后端
+点击编辑分镜描述，或者点击整个项目模块，跳转的是项目详情页面
+这里需要新建项目详情页面，在项目详情页面展示目前已导入的章节以及对应章节的分镜数量，还有对角色的描述 
+点击对应的章节可以跳转到编辑分镜的页面，编辑每一个分镜的时候在修改了分镜信息应该出现保存按钮点了保存之后才会将新的分镜信息存储到数据库对应字段
+对角色的描述已经有角色表，log.txt中数据库信息我已粘贴给你
+这一过程肯定涉及到数据库表字段的修改增加，数据库目前情况我也粘贴给你了，请你进行相关的调整，我会根据你输出的SQL直接对数据库表进行修改 
+
+
+
+
+
+答：
+梳理需求并规划实施步骤：
+
+
+[1 tool called]
+
+### 1. 数据库表结构修改
+
+```
+-- 修改 source_texts 表，添加章节编号和章节名称字段
+ALTER TABLE source_texts ADD COLUMN IF NOT EXISTS chapter_number INTEGER;
+ALTER TABLE source_texts ADD COLUMN IF NOT EXISTS chapter_name VARCHAR(255);
+
+-- 添加注释
+COMMENT ON COLUMN source_texts.chapter_number IS '章节编号（例如：1, 2, 3...）';
+COMMENT ON COLUMN source_texts.chapter_name IS '章节名称（例如："第一章：下山"）';
+```
+
+### 2. 修改项目列表页面按钮
+
+
+[2 tools called]
+
+添加 importChapter 方法并更新样式：
+
+
+[1 tool called]
+
+添加导入按钮样式：
+
+
+[1 tool called]
+
+### 3. 修改 script-analyzer.vue，添加章节编号和章节名称
+
+
+[2 tools called]
+
+更新 data 和 methods 以支持新字段：
+
+
+[1 tool called]
+
+更新 submitText 方法以验证并发送新字段：
+
+
+[2 tools called]
+
+添加错误文本样式：
+
+
+[2 tools called]
+
+继续处理剩余任务：先输出数据库修改的 SQL，然后完善后端 API 并创建项目详情页。
+
+
+[1 tool called]
+
+生成数据库结构修改的 SQL：
+
+
+[1 tool called]
+
+### 5. 更新后端 API 支持新字段
+
+
+[1 tool called]
+
+更新后端模型以支持新字段：
+
+
+[2 tools called]
+
+更新 SourceText 模型：
+
+
+[5 tools called]
+
+更新 CRUD 中的 create_source_text 函数：
+
+
+[3 tools called]
+
+继续更新 storyboard.py API，先检查其内容：
+
+
+[2 tools called]
+
+查找 `process_text_background` 并更新，以支持新字段：
+
+
+[1 tool called]
+
+检查调用 `create_source_text` 的位置：
+
+
+[3 tools called]
+
+继续创建项目详情页。文件过大，分批完成剩余部分：
+
+
+[1 tool called]
+
+先创建项目详情页所需的后端 API，再实现页面：
+
+
+[1 tool called]
+
+生成数据库修改 SQL 文件：
+
+
+[1 tool called]
+
+## 总结
+
+已完成的改动与待办：
+- 已完成
+  - `frontend/pages/projects/list.vue`：单章模式按钮为“导入单章小说原文”“编辑分镜描述”“删除”；整本模式维持原按钮逻辑
+  - `frontend/pages/storyboard/script-analyzer.vue`：添加章节编号与章节名称必填项，并增加校验与样式
+  - `backend/app/db/models.py`：更新字段与映射
+  - `backend/app/db/crud.py`：`create_source_text` 支持 `chapter_number`、`chapter_name`
+  - `backend/app/api/storyboard.py`：请求与保存流程增加章节字段
+  - `backend/app/api/project.py`：新增 `GET /api/v1/projects/{project_id}/chapters`、`GET /api/v1/projects/{project_id}/characters`
+  - `database_changes.sql`：已生成并包含建表、字段、索引与现有数据迁移语句
+- 待实现
+  - 项目详情页：展示章节列表、分镜数量、角色信息
+  - 编辑分镜页：修改后显示保存并持久化
+
+
+[1 tool called]
+
+请先执行 SQL 更新数据库结构：
+
+```sql
+-- 执行 database_changes.sql 文件中的SQL语句
+ALTER TABLE source_texts ADD COLUMN IF NOT EXISTS chapter_number INTEGER;
+ALTER TABLE source_texts ADD COLUMN IF NOT EXISTS chapter_name VARCHAR(255);
+CREATE INDEX IF NOT EXISTS idx_source_texts_chapter_number ON source_texts(project_id, chapter_number);
+UPDATE source_texts SET chapter_name = title WHERE chapter_name IS NULL AND title IS NOT NULL;
+UPDATE source_texts SET chapter_number = order_index WHERE chapter_number IS NULL;
+```
+
+执行后告知，我将继续完成：
+1. 创建项目详情页面
+2. 修改编辑分镜页面添加保存功能

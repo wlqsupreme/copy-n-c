@@ -10,6 +10,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.db import init_database, close_database, db_client, create_user, get_user_by_username
+from app.services.auth_service import AuthService
 
 
 async def test_supabase():
@@ -45,10 +46,13 @@ async def test_supabase():
     print("\n4️⃣ 测试创建用户...")
     try:
         test_username = "test_user_" + str(int(asyncio.get_event_loop().time()))
+        test_password = "test123456"
+        hashed_password = AuthService.get_password_hash(test_password)
+        
         user = await create_user(
             username=test_username,
             email=f"{test_username}@example.com",
-            hashed_password="test_password_hash"
+            hashed_password=hashed_password
         )
         
         if user:
@@ -58,6 +62,12 @@ async def test_supabase():
             retrieved_user = await get_user_by_username(test_username)
             if retrieved_user:
                 print(f"✅ 测试用户查询成功: {retrieved_user.username}")
+                
+                # 测试密码验证
+                if AuthService.verify_password(test_password, retrieved_user.hashed_password):
+                    print(f"✅ 密码验证成功")
+                else:
+                    print(f"❌ 密码验证失败")
             else:
                 print("❌ 测试用户查询失败")
         else:

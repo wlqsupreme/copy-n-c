@@ -39,6 +39,13 @@
 				"navigationBarTitleText": "我的项目",
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			"path": "pages/projects/detail",
+			"style": {
+				"navigationBarTitleText": "项目详情",
+				"navigationStyle": "custom"
+			}
 		}
 	],
 	"globalStyle": {

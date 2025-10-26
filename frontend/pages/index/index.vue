@@ -1,15 +1,7 @@
 <template>
   <view class="container">
-    <!-- 顶部导航栏 -->
-    <view class="header">
-      <view class="nav-left">
-        <text class="logo">小说转漫画</text>
-      </view>
-      <view class="nav-right">
-        <text class="nav-link" @click="goToLogin">登录</text>
-        <text class="nav-link" @click="goToRegister">注册</text>
-      </view>
-    </view>
+    <!-- 通用头部 -->
+    <CommonHeader />
 
     <!-- 主要内容区域 -->
     <view class="main-content">
@@ -101,30 +93,34 @@
 </template>
 
 <script>
+import CommonHeader from '../../components/CommonHeader.vue'
+import authManager from '../../utils/auth.js'
+
 export default {
+  components: {
+    CommonHeader
+  },
+  
   data() {
     return {
-      // 移除弹窗相关的数据
+      // 移除登录状态相关的数据，由 CommonHeader 组件处理
     }
   },
   
   methods: {
-    goToLogin() {
-      uni.navigateTo({
-        url: '/pages/auth/login'
-      })
-    },
-    
-    goToRegister() {
-      uni.navigateTo({
-        url: '/pages/auth/register'
-      })
-    },
-    
     goToScriptAnalyzer() {
-      uni.navigateTo({
-        url: '/pages/storyboard/script-analyzer'
-      })
+      // 根据登录状态决定跳转
+      if (authManager.isLoggedIn()) {
+        // 已登录：跳转到我的项目
+        uni.navigateTo({
+          url: '/pages/projects/list'
+        })
+      } else {
+        // 未登录：跳转到登录页面
+        uni.navigateTo({
+          url: '/pages/auth/login'
+        })
+      }
     },
     
     goToLayoutPlanner() {
@@ -155,30 +151,7 @@ export default {
   background-color: #ffffff;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 40rpx 60rpx;
-  background-color: transparent;
-}
-
-.logo {
-  font-size: 48rpx;
-  font-weight: bold;
-  color: #000000;
-}
-
-.nav-right {
-  display: flex;
-  gap: 40rpx;
-}
-
-.nav-link {
-  font-size: 32rpx;
-  color: #000000;
-  cursor: pointer;
-}
+/* 头部样式已移至 CommonHeader 组件 */
 
 .main-content {
   padding: 80rpx 60rpx;

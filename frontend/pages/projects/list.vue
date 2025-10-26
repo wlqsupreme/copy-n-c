@@ -1,391 +1,276 @@
 <template>
   <view class="container">
-    <!-- 顶部导航栏 -->
-    <view class="header">
-      <view class="nav-left">
-        <button class="back-btn" @click="goBack">←</button>
-        <text class="page-title">我的项目</text>
-      </view>
-      <view class="nav-right">
-        <button class="add-btn" @click="showCreateProject">+ 新建项目</button>
-      </view>
-    </view>
-
+    <!-- 通用头部 -->
+    <CommonHeader />
+    
     <!-- 主要内容区域 -->
     <view class="main-content">
-      <!-- 统计信息 -->
-      <view class="stats-section">
-        <view class="stat-card">
-          <text class="stat-number">{{ projects.length }}</text>
-          <text class="stat-label">总项目</text>
-        </view>
-        <view class="stat-card">
-          <text class="stat-number">{{ activeProjects }}</text>
-          <text class="stat-label">进行中</text>
-        </view>
-        <view class="stat-card">
-          <text class="stat-number">{{ completedProjects }}</text>
-          <text class="stat-label">已完成</text>
-        </view>
+      <!-- 操作栏 -->
+      <view class="action-bar">
+        <text class="page-title">我的项目</text>
+        <button class="add-btn" @click="showCreateProject">+ 新建项目</button>
       </view>
 
       <!-- 项目列表 -->
-      <view class="projects-section">
-        <view class="section-header">
-          <text class="section-title">项目列表</text>
-          <view class="filter-tabs">
-            <text 
-              class="filter-tab" 
-              :class="{ active: currentFilter === 'all' }"
-              @click="setFilter('all')"
-            >全部</text>
-            <text 
-              class="filter-tab" 
-              :class="{ active: currentFilter === 'active' }"
-              @click="setFilter('active')"
-            >进行中</text>
-            <text 
-              class="filter-tab" 
-              :class="{ active: currentFilter === 'completed' }"
-              @click="setFilter('completed')"
-            >已完成</text>
+      <view class="project-list-container">
+        <view 
+          v-for="project in projects" 
+          :key="project.project_id" 
+          class="project-card"
+          @click="goToProjectDetail(project)"
+        >
+          <view class="project-header">
+            <text class="project-title">{{ project.title }}</text>
+            <view class="project-status" :class="project.visibility">
+              <text class="status-text">{{ project.visibility === 'public' ? '公开' : '私有' }}</text>
+            </view>
           </view>
-        </view>
-
-        <view class="projects-grid">
-          <view 
-            class="project-card" 
-            v-for="project in filteredProjects" 
-            :key="project.project_id"
-            @click="openProject(project)"
-          >
-            <view class="project-header">
-              <text class="project-title">{{ project.title }}</text>
-              <view class="project-status" :class="project.status">
-                <text class="status-text">{{ getStatusText(project.status) }}</text>
-              </view>
+          
+          <text class="project-description">{{ project.description || '暂无描述' }}</text>
+          
+          <view class="project-meta">
+            <view class="meta-item">
+              <text class="meta-icon">📖</text>
+              <text class="meta-text">{{ project.chapter_count || 0 }} 章节</text>
             </view>
-            
-            <text class="project-description">{{ project.description || '暂无描述' }}</text>
-            
-            <view class="project-meta">
-              <view class="meta-item">
-                <text class="meta-icon">📖</text>
-                <text class="meta-text">{{ project.chapter_count || 0 }} 章节</text>
-              </view>
-              <view class="meta-item">
-                <text class="meta-icon">👥</text>
-                <text class="meta-text">{{ project.character_count || 0 }} 角色</text>
-              </view>
-              <view class="meta-item">
-                <text class="meta-icon">📅</text>
-                <text class="meta-text">{{ formatDate(project.updated_at) }}</text>
-              </view>
+            <view class="meta-item">
+              <text class="meta-icon">👥</text>
+              <text class="meta-text">{{ project.character_count || 0 }} 角色</text>
             </view>
-            
-            <view class="project-actions">
+            <view class="meta-item">
+              <text class="meta-icon">📅</text>
+              <text class="meta-text">{{ formatDate(project.updated_at) }}</text>
+            </view>
+          </view>
+          
+          <view class="project-actions">
+            <!-- 根据上传方式显示不同的按钮 -->
+            <template v-if="project.upload_method === 'single_chapter'">
+              <button class="action-btn import" @click.stop="importChapter(project)">导入单章小说原文</button>
+              <button class="action-btn storyboard" @click.stop="goToProjectDetail(project)">编辑分镜描述</button>
+              <button class="action-btn delete" @click.stop="deleteProject(project)">删除</button>
+            </template>
+            <template v-else>
               <button class="action-btn storyboard" @click.stop="editStoryboard(project)">编辑分镜</button>
               <button class="action-btn edit" @click.stop="editProject(project)">编辑</button>
               <button class="action-btn delete" @click.stop="deleteProject(project)">删除</button>
-            </view>
+            </template>
           </view>
         </view>
+      </view>
 
-        <!-- 空状态 -->
-        <view class="empty-state" v-if="filteredProjects.length === 0">
-          <text class="empty-icon">📚</text>
-          <text class="empty-title">暂无项目</text>
-          <text class="empty-desc">创建你的第一个项目开始创作吧</text>
-          <button class="empty-btn" @click="showCreateProject">创建项目</button>
-        </view>
+      <!-- 空状态 -->
+      <view class="empty-state" v-if="projects.length === 0">
+        <text class="empty-icon">📚</text>
+        <text class="empty-title">暂无项目</text>
+        <text class="empty-desc">创建你的第一个项目开始创作吧</text>
+        <button class="empty-btn" @click="showCreateProject">创建项目</button>
       </view>
     </view>
 
     <!-- 创建项目弹窗 -->
     <view class="modal" v-if="showCreateModal" @click="closeCreateModal">
       <view class="modal-content" @click.stop>
-        <view class="modal-header">
-          <text class="modal-title">创建新项目</text>
-          <button class="close-btn" @click="closeCreateModal">×</button>
-        </view>
-        <view class="modal-body">
-          <view class="form-group">
-            <text class="form-label">项目标题</text>
-            <input 
-              class="form-input" 
-              v-model="newProject.title" 
-              placeholder="请输入项目标题"
-              :class="{ 'error': errors.title }"
-            />
-            <text class="error-text" v-if="errors.title">{{ errors.title }}</text>
-          </view>
-          
-          <view class="form-group">
-            <text class="form-label">项目描述</text>
-            <textarea 
-              class="form-textarea" 
-              v-model="newProject.description" 
-              placeholder="请输入项目描述（可选）"
-            ></textarea>
-          </view>
-          
-          <view class="form-group">
-            <text class="form-label">可见性</text>
-            <view class="radio-group">
-              <view class="radio-item">
-                <radio value="private" :checked="newProject.visibility === 'private'" @click="newProject.visibility = 'private'" />
-                <text class="radio-text">私有</text>
-              </view>
-              <view class="radio-item">
-                <radio value="public" :checked="newProject.visibility === 'public'" @click="newProject.visibility = 'public'" />
-                <text class="radio-text">公开</text>
-              </view>
-            </view>
-          </view>
-        </view>
-        <view class="modal-footer">
-          <button class="btn cancel" @click="closeCreateModal">取消</button>
-          <button class="btn confirm" @click="createProject" :disabled="isCreating">
-            <text v-if="isCreating">创建中...</text>
-            <text v-else>创建项目</text>
-          </button>
-        </view>
+        <NewProjectForm @close="closeCreateModal" @submit="handleCreateProject" />
       </view>
     </view>
   </view>
 </template>
 
 <script>
+import CommonHeader from '../../components/CommonHeader.vue'
+import NewProjectForm from '../../components/NewProjectForm.vue'
+import authManager from '../../utils/auth.js'
+
 export default {
+  components: {
+    CommonHeader,
+    NewProjectForm
+  },
+  
   data() {
     return {
-      projects: [
-        {
-          project_id: '1',
-          title: '修仙传说',
-          description: '一个关于修仙世界的奇幻故事',
-          visibility: 'private',
-          status: 'active',
-          chapter_count: 5,
-          character_count: 8,
-          created_at: '2024-01-15T10:00:00Z',
-          updated_at: '2024-01-20T15:30:00Z'
-        },
-        {
-          project_id: '2',
-          title: '都市情缘',
-          description: '现代都市背景的爱情故事',
-          visibility: 'public',
-          status: 'completed',
-          chapter_count: 12,
-          character_count: 6,
-          created_at: '2024-01-10T09:00:00Z',
-          updated_at: '2024-01-18T20:00:00Z'
-        },
-        {
-          project_id: '3',
-          title: '星际战争',
-          description: '未来科幻背景的战争史诗',
-          visibility: 'private',
-          status: 'active',
-          chapter_count: 3,
-          character_count: 12,
-          created_at: '2024-01-22T14:00:00Z',
-          updated_at: '2024-01-23T11:15:00Z'
-        }
-      ],
-      currentFilter: 'all',
+      projects: [],
       showCreateModal: false,
-      isCreating: false,
-      newProject: {
-        title: '',
-        description: '',
-        visibility: 'private'
-      },
-      errors: {}
+      isLoading: false
     }
   },
   
-  computed: {
-    activeProjects() {
-      return this.projects.filter(p => p.status === 'active').length
-    },
-    
-    completedProjects() {
-      return this.projects.filter(p => p.status === 'completed').length
-    },
-    
-    filteredProjects() {
-      if (this.currentFilter === 'all') {
-        return this.projects
-      }
-      return this.projects.filter(p => p.status === this.currentFilter)
-    }
+  onLoad() {
+    // 检查登录状态
+    this.checkAuth();
+    // 加载项目列表
+    this.loadProjects();
+  },
+  
+  onShow() {
+    // 每次页面显示时重新加载项目列表
+    this.loadProjects();
   },
   
   methods: {
-    goBack() {
-      uni.navigateBack()
-    },
-    
-    setFilter(filter) {
-      this.currentFilter = filter
-    },
-    
-    getStatusText(status) {
-      const statusMap = {
-        'active': '进行中',
-        'completed': '已完成',
-        'draft': '草稿'
+    checkAuth() {
+      if (!authManager.isLoggedIn()) {
+        uni.showToast({
+          title: '请先登录',
+          icon: 'none'
+        });
+        setTimeout(() => {
+          uni.navigateTo({
+            url: '/pages/auth/login'
+          });
+        }, 1500);
+        return false;
       }
-      return statusMap[status] || '未知'
+      return true;
     },
     
-    formatDate(dateString) {
-      const date = new Date(dateString)
-      return date.toLocaleDateString('zh-CN')
+    async loadProjects() {
+      if (!this.checkAuth()) return;
+      
+      // 获取用户信息
+      const userInfo = authManager.getUserInfo();
+      if (!userInfo || !userInfo.user_id) {
+        uni.showToast({
+          title: '请先登录',
+          icon: 'none'
+        });
+        return;
+      }
+      
+      this.isLoading = true;
+      try {
+        const response = await uni.request({
+          url: `http://localhost:8000/api/v1/projects?user_id=${userInfo.user_id}`,
+          method: 'GET',
+          header: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authManager.getToken()}`
+          }
+        });
+        
+        if (response.statusCode === 200) {
+          this.projects = response.data || [];
+        } else {
+          throw new Error(response.data.detail || '加载失败');
+        }
+      } catch (error) {
+        console.error('加载项目列表失败:', error);
+        uni.showToast({
+          title: '加载失败: ' + error.message,
+          icon: 'none'
+        });
+      } finally {
+        this.isLoading = false;
+      }
     },
     
     showCreateProject() {
-      this.showCreateModal = true
-      this.newProject = {
-        title: '',
-        description: '',
-        visibility: 'private'
-      }
-      this.errors = {}
+      this.showCreateModal = true;
     },
     
     closeCreateModal() {
-      this.showCreateModal = false
+      this.showCreateModal = false;
     },
     
-    validateProject() {
-      this.errors = {}
-      
-      if (!this.newProject.title.trim()) {
-        this.errors.title = '请输入项目标题'
-      } else if (this.newProject.title.length < 2) {
-        this.errors.title = '项目标题至少2个字符'
-      }
-      
-      return Object.keys(this.errors).length === 0
+    handleCreateProject(newProject) {
+      // 将新项目添加到列表顶部
+      this.projects.unshift(newProject);
+      uni.showToast({
+        title: '项目创建成功',
+        icon: 'success'
+      });
     },
     
-    async createProject() {
-      if (!this.validateProject()) {
-        return
-      }
-      
-      this.isCreating = true
-      
-      try {
-        // 模拟API调用
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        
-        const newProjectData = {
-          project_id: Date.now().toString(),
-          title: this.newProject.title,
-          description: this.newProject.description,
-          visibility: this.newProject.visibility,
-          status: 'active',
-          chapter_count: 0,
-          character_count: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-        
-        this.projects.unshift(newProjectData)
-        
-        uni.showToast({
-          title: '项目创建成功',
-          icon: 'success'
-        })
-        
-        this.closeCreateModal()
-        
-      } catch (error) {
-        uni.showToast({
-          title: '创建失败，请重试',
-          icon: 'none'
-        })
-      } finally {
-        this.isCreating = false
-      }
+    formatDate(dateString) {
+      if (!dateString) return '未知';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('zh-CN');
     },
     
-    openProject(project) {
+    goToProjectDetail(project) {
       uni.navigateTo({
         url: `/pages/projects/detail?projectId=${project.project_id}`
-      })
+      });
+    },
+    
+    importChapter(project) {
+      uni.navigateTo({
+        url: `/pages/storyboard/script-analyzer?project_id=${project.project_id}`
+      });
     },
     
     editStoryboard(project) {
       uni.navigateTo({
         url: `/pages/storyboard/script-analyzer?project_id=${project.project_id}`
-      })
+      });
     },
     
     editProject(project) {
       uni.showToast({
         title: '编辑功能开发中',
         icon: 'none'
-      })
+      });
     },
     
     deleteProject(project) {
       uni.showModal({
         title: '确认删除',
         content: `确定要删除项目"${project.title}"吗？此操作不可恢复。`,
-        success: (res) => {
+        success: async (res) => {
           if (res.confirm) {
-            const index = this.projects.findIndex(p => p.project_id === project.project_id)
-            if (index > -1) {
-              this.projects.splice(index, 1)
+            try {
+              const response = await uni.request({
+                url: `http://localhost:8000/api/v1/projects/${project.project_id}`,
+                method: 'DELETE'
+              });
+              
+              if (response.statusCode === 200) {
+                // 从列表中移除项目
+                const index = this.projects.findIndex(p => p.project_id === project.project_id);
+                if (index > -1) {
+                  this.projects.splice(index, 1);
+                }
+                uni.showToast({
+                  title: '删除成功',
+                  icon: 'success'
+                });
+              } else {
+                throw new Error(response.data.detail || '删除失败');
+              }
+            } catch (error) {
               uni.showToast({
-                title: '删除成功',
-                icon: 'success'
-              })
+                title: '删除失败: ' + error.message,
+                icon: 'none'
+              });
             }
           }
         }
-      })
+      });
     }
   }
 }
 </script>
 
-<style>
+<style scoped>
 .container {
   min-height: 100vh;
   background-color: #f8f9fa;
 }
 
-.header {
+.main-content {
+  padding: 40rpx 60rpx;
+}
+
+.action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 40rpx 60rpx;
-  background-color: #ffffff;
-  border-bottom: 1rpx solid #e9ecef;
-}
-
-.back-btn {
-  width: 60rpx;
-  height: 60rpx;
-  background-color: #f5f5f5;
-  color: #333333;
-  border: none;
-  border-radius: 50%;
-  font-size: 32rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 20rpx;
+  margin-bottom: 40rpx;
 }
 
 .page-title {
-  font-size: 36rpx;
+  font-size: 48rpx;
   font-weight: bold;
   color: #000000;
 }
@@ -400,87 +285,25 @@ export default {
   font-weight: bold;
 }
 
-.main-content {
-  padding: 40rpx 60rpx;
-}
-
-.stats-section {
+/* 项目列表容器 - 响应式网格 */
+.project-list-container {
   display: flex;
+  flex-wrap: wrap;
   gap: 30rpx;
-  margin-bottom: 60rpx;
+  justify-content: flex-start;
 }
 
-.stat-card {
-  flex: 1;
-  background-color: #ffffff;
-  border-radius: 16rpx;
-  padding: 40rpx 30rpx;
-  text-align: center;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
-}
-
-.stat-number {
-  font-size: 48rpx;
-  font-weight: bold;
-  color: #000000;
-  display: block;
-  margin-bottom: 10rpx;
-}
-
-.stat-label {
-  font-size: 24rpx;
-  color: #666666;
-}
-
-.projects-section {
-  background-color: #ffffff;
-  border-radius: 16rpx;
-  padding: 40rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 40rpx;
-}
-
-.section-title {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #000000;
-}
-
-.filter-tabs {
-  display: flex;
-  gap: 20rpx;
-}
-
-.filter-tab {
-  padding: 15rpx 30rpx;
-  font-size: 26rpx;
-  color: #666666;
-  border-radius: 20rpx;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.filter-tab.active {
-  background-color: #000000;
-  color: #ffffff;
-}
-
-.projects-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400rpx, 1fr));
-  gap: 30rpx;
-}
-
+/* 项目卡片 */
 .project-card {
+  flex-basis: 400rpx;
+  flex-grow: 1;
+  min-width: 350rpx;
+  
   border: 2rpx solid #e9ecef;
   border-radius: 16rpx;
   padding: 30rpx;
+  background-color: #ffffff;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
   cursor: pointer;
 }
@@ -488,6 +311,7 @@ export default {
 .project-card:hover {
   border-color: #000000;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+  transform: translateY(-2rpx);
 }
 
 .project-header {
@@ -511,14 +335,14 @@ export default {
   font-size: 22rpx;
 }
 
-.project-status.active {
-  background-color: #e3f2fd;
-  color: #1976d2;
+.project-status.private {
+  background-color: #f8f9fa;
+  color: #6c757d;
 }
 
-.project-status.completed {
-  background-color: #e8f5e8;
-  color: #2e7d32;
+.project-status.public {
+  background-color: #d4edda;
+  color: #155724;
 }
 
 .project-description {
@@ -565,6 +389,11 @@ export default {
   font-weight: bold;
 }
 
+.action-btn.import {
+  background-color: #28a745;
+  color: #ffffff;
+}
+
 .action-btn.storyboard {
   background-color: #007aff;
   color: #ffffff;
@@ -580,9 +409,10 @@ export default {
   color: #721c24;
 }
 
+/* 空状态 */
 .empty-state {
   text-align: center;
-  padding: 80rpx 40rpx;
+  padding: 120rpx 40rpx;
 }
 
 .empty-icon {
@@ -638,142 +468,22 @@ export default {
   overflow: hidden;
 }
 
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 30rpx;
-  border-bottom: 1rpx solid #eee;
-}
-
-.modal-title {
-  font-size: 36rpx;
-  font-weight: bold;
-  color: #333;
-}
-
-.close-btn {
-  width: 60rpx;
-  height: 60rpx;
-  background-color: #f0f0f0;
-  color: #666;
-  border: none;
-  border-radius: 50%;
-  font-size: 40rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-body {
-  padding: 30rpx;
-}
-
-.form-group {
-  margin-bottom: 30rpx;
-}
-
-.form-label {
-  font-size: 28rpx;
-  color: #333;
-  font-weight: bold;
-  display: block;
-  margin-bottom: 10rpx;
-}
-
-.form-input {
-  width: 100%;
-  height: 80rpx;
-  border: 2rpx solid #ddd;
-  border-radius: 10rpx;
-  padding: 0 20rpx;
-  font-size: 28rpx;
-  box-sizing: border-box;
-}
-
-.form-input.error {
-  border-color: #ff4757;
-}
-
-.form-textarea {
-  width: 100%;
-  height: 120rpx;
-  border: 2rpx solid #ddd;
-  border-radius: 10rpx;
-  padding: 20rpx;
-  font-size: 28rpx;
-  box-sizing: border-box;
-  resize: none;
-}
-
-.radio-group {
-  display: flex;
-  gap: 30rpx;
-}
-
-.radio-item {
-  display: flex;
-  align-items: center;
-  gap: 10rpx;
-}
-
-.radio-text {
-  font-size: 28rpx;
-  color: #333;
-}
-
-.error-text {
-  font-size: 24rpx;
-  color: #ff4757;
-  display: block;
-  margin-top: 10rpx;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 20rpx;
-  padding: 30rpx;
-  border-top: 1rpx solid #eee;
-}
-
-.btn {
-  padding: 20rpx 40rpx;
-  border: none;
-  border-radius: 10rpx;
-  font-size: 28rpx;
-  font-weight: bold;
-}
-
-.btn.cancel {
-  background-color: #f0f0f0;
-  color: #666;
-}
-
-.btn.confirm {
-  background-color: #000000;
-  color: white;
-}
-
-.btn.confirm:disabled {
-  opacity: 0.6;
-}
-
 /* 响应式设计 */
 @media (max-width: 750rpx) {
   .main-content {
     padding: 30rpx;
   }
   
-  .stats-section {
+  .project-list-container {
     flex-direction: column;
   }
   
-  .projects-grid {
-    grid-template-columns: 1fr;
+  .project-card {
+    flex-basis: auto;
+    min-width: auto;
   }
   
-  .section-header {
+  .action-bar {
     flex-direction: column;
     align-items: flex-start;
     gap: 20rpx;

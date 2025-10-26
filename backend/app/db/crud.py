@@ -120,7 +120,8 @@ async def create_project(
     title: str, 
     description: Optional[str] = None,
     visibility: ProjectVisibility = ProjectVisibility.PRIVATE,
-    default_style_prompt: Optional[str] = None
+    default_style_prompt: Optional[str] = None,
+    upload_method: str = "single_chapter"
 ) -> Optional[Project]:
     """
     创建新项目
@@ -131,6 +132,7 @@ async def create_project(
         description: 项目描述
         visibility: 可见性
         default_style_prompt: 默认风格提示词
+        upload_method: 上传方式 (single_chapter 或 full_novel)
         
     Returns:
         Optional[Project]: 创建的项目对象或None
@@ -142,7 +144,8 @@ async def create_project(
             ProjectFields.TITLE: title,
             ProjectFields.DESCRIPTION: description,
             ProjectFields.VISIBILITY: visibility.value,
-            ProjectFields.DEFAULT_STYLE_PROMPT: default_style_prompt
+            ProjectFields.DEFAULT_STYLE_PROMPT: default_style_prompt,
+            ProjectFields.UPLOAD_METHOD: upload_method
         }
         
         result = await db_client.insert(TableNames.PROJECTS, project_data)
@@ -236,7 +239,9 @@ async def create_source_text(
     project_id: str,
     title: str,
     raw_content: str,
-    order_index: int = 0
+    order_index: int = 0,
+    chapter_number: Optional[int] = None,
+    chapter_name: Optional[str] = None
 ) -> Optional[SourceText]:
     """
     创建原文记录
@@ -246,6 +251,8 @@ async def create_source_text(
         title: 标题
         raw_content: 原始内容
         order_index: 排序索引
+        chapter_number: 章节编号
+        chapter_name: 章节名称
         
     Returns:
         Optional[SourceText]: 创建的原文对象或None
@@ -256,7 +263,9 @@ async def create_source_text(
             SourceTextFields.PROJECT_ID: project_id,
             SourceTextFields.TITLE: title,
             SourceTextFields.RAW_CONTENT: raw_content,
-            SourceTextFields.ORDER_INDEX: order_index
+            SourceTextFields.ORDER_INDEX: order_index,
+            SourceTextFields.CHAPTER_NUMBER: chapter_number,
+            SourceTextFields.CHAPTER_NAME: chapter_name
         }
         
         result = await db_client.insert(TableNames.SOURCE_TEXTS, text_data)
@@ -595,3 +604,90 @@ async def get_user_stats(user_id: str) -> Dict[str, Any]:
     except Exception as e:
         print(f"❌ 获取用户统计失败: {e}")
         return {"project_count": 0, "text_count": 0, "character_count": 0}
+
+
+# ==================== 状态管理相关操作 ====================
+
+async def update_source_text_status(text_id: str, status: str, error_message: Optional[str] = None):
+    """更新 source_texts 表的处理状态和错误信息"""
+    try:
+        updates = {"processing_status": status}
+        if error_message:
+            updates["error_message"] = error_message
+        await db_client.update(
+            TableNames.SOURCE_TEXTS,
+            updates,
+            {SourceTextFields.TEXT_ID: text_id}
+        )
+        print(f"   (DB) 更新 text_id {text_id} 状态为: {status}")
+    except Exception as e:
+        print(f"❌ 更新状态失败 text_id {text_id}: {e}")
+
+
+async def update_source_text(
+    text_id: str,
+    title: Optional[str] = None,
+    chapter_number: Optional[int] = None,
+    chapter_name: Optional[str] = None,
+    order_index: Optional[int] = None
+) -> bool:
+    """更新原文信息"""
+    try:
+        updates = {}
+        
+        if title is not None:
+            updates[SourceTextFields.TITLE] = title
+        if chapter_number is not None:
+            updates[SourceTextFields.CHAPTER_NUMBER] = chapter_number
+        if chapter_name is not None:
+            updates[SourceTextFields.CHAPTER_NAME] = chapter_name
+        if order_index is not None:
+            updates[SourceTextFields.ORDER_INDEX] = order_index
+        
+        if not updates:
+            return False
+        
+        await db_client.update(
+            TableNames.SOURCE_TEXTS,
+            updates,
+            {SourceTextFields.TEXT_ID: text_id}
+        )
+        print(f"✅ 更新原文成功: {text_id}")
+        return True
+    except Exception as e:
+        print(f"❌ 更新原文失败: {e}")
+        return False
+
+
+async def get_source_text_by_id(text_id: str) -> Optional[SourceText]:
+    """根据ID获取原文"""
+    try:
+        results = await db_client.select(
+            TableNames.SOURCE_TEXTS,
+            filters={SourceTextFields.TEXT_ID: text_id}
+        )
+        if results:
+            # 手动添加 status 和 error 字段到模型（如果模型定义没更新）
+            data = results[0]
+            st = SourceText.from_dict(data)
+            st.processing_status = data.get("processing_status", "pending")
+            st.error_message = data.get("error_message")
+            return st
+        return None
+    except Exception as e:
+        print(f"❌ 获取原文失败: {e}")
+        return None
+
+
+async def delete_storyboard_panel(storyboard_id: str) -> bool:
+    """删除单个分镜面板"""
+    try:
+        await db_client.delete(
+            TableNames.STORYBOARDS,
+            {StoryboardFields.STORYBOARD_ID: storyboard_id}
+        )
+        print(f"✅ 分镜面板删除成功: {storyboard_id}")
+        return True
+    except Exception as e:
+        print(f"❌ 删除分镜面板失败: {e}")
+        return False
