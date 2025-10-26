@@ -90,6 +90,8 @@ class StoryboardFields:
     CREATED_AT = "created_at"
     UPDATED_AT = "updated_at"
     CHARACTER_ID = "character_id"
+    DIALOGUE = "dialogue"
+    PANEL_ELEMENTS = "panel_elements"
 
 
 # 数据模型类
@@ -320,7 +322,9 @@ class StoryboardPanel:
         generated_image_url: Optional[str] = None,
         created_at: Optional[datetime] = None,
         updated_at: Optional[datetime] = None,
-        character_id: Optional[str] = None
+        character_id: Optional[str] = None,
+        dialogue: Optional[str] = None,
+        panel_elements: Optional[List[Dict[str, Any]]] = None
     ):
         self.storyboard_id = storyboard_id or str(uuid.uuid4())
         self.project_id = project_id
@@ -336,6 +340,8 @@ class StoryboardPanel:
         self.created_at = created_at
         self.updated_at = updated_at
         self.character_id = character_id
+        self.dialogue = dialogue
+        self.panel_elements = panel_elements or []
     
     def to_dict(self) -> Dict[str, Any]:
         """转换为字典"""
@@ -353,7 +359,9 @@ class StoryboardPanel:
             StoryboardFields.GENERATED_IMAGE_URL: self.generated_image_url,
             StoryboardFields.CREATED_AT: self.created_at,
             StoryboardFields.UPDATED_AT: self.updated_at,
-            StoryboardFields.CHARACTER_ID: self.character_id
+            StoryboardFields.CHARACTER_ID: self.character_id,
+            StoryboardFields.DIALOGUE: self.dialogue,
+            StoryboardFields.PANEL_ELEMENTS: self.panel_elements
         }
     
     @classmethod
@@ -373,7 +381,9 @@ class StoryboardPanel:
             generated_image_url=data.get(StoryboardFields.GENERATED_IMAGE_URL),
             created_at=data.get(StoryboardFields.CREATED_AT),
             updated_at=data.get(StoryboardFields.UPDATED_AT),
-            character_id=data.get(StoryboardFields.CHARACTER_ID)
+            character_id=data.get(StoryboardFields.CHARACTER_ID),
+            dialogue=data.get(StoryboardFields.DIALOGUE),
+            panel_elements=data.get(StoryboardFields.PANEL_ELEMENTS, [])
         )
 
 

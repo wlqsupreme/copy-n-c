@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分镜数据库字段图片生成测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .info-box h4 {
+            color: #1976D2;
+            margin-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        label small {
+            font-weight: normal;
+            color: #666;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .result h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .image-container {
+            margin-top: 20px;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .prompt-display {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .prompt-display h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .prompt-display pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .sample-data {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .sample-btn {
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .sample-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 分镜数据库字段图片生成</h1>
+            <p>根据数据库分镜字段自动生成配图</p>
+        </div>
+
+        <div class="content">
+            <div class="info-box">
+                <h4>功能说明</h4>
+                <p>输入数据库中的分镜描述字段，系统会自动组合成提示词并生成对应的图片。</p>
+            </div>
+
+            <div class="sample-data">
+                <span style="font-weight:600; margin-right:10px;">快速填充样例数据：</span>
+                <button class="sample-btn" onclick="loadSample1()">样例1 - 少年下山</button>
+                <button class="sample-btn" onclick="loadSample2()">样例2 - 恐惧场景</button>
+                <button class="sample-btn" onclick="loadSample3()">样例3 - 战斗场景</button>
+            </div>
+
+            <form id="storyboardForm">
+                <div class="form-group">
+                    <label>风格要求 <small>(style_requirements)</small></label>
+                    <input type="text" id="style_requirements" placeholder="例如：漫画风格,黑白网点,清晰的线条" required>
+                </div>
+
+                <div class="form-group">
+                    <label>角色外观 <small>(character_appearance)</small></label>
+                    <textarea id="character_appearance" rows="2" placeholder="例如：年龄17岁,男性,身高178cm,黑色短发,穿着简单的旅行装"
+                        required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>场景和光线 <small>(scene_and_lighting)</small></label>
+                    <textarea id="scene_and_lighting" rows="2" placeholder="例如：山路,清晨,浓雾,太阳刚升起" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>镜头和构图 <small>(camera_and_composition)</small></label>
+                    <textarea id="camera_and_composition" rows="2" placeholder="例如：中景镜头,从背后拍摄,聚焦人物" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>表情和动作 <small>(expression_and_action)</small></label>
+                    <textarea id="expression_and_action" rows="2" placeholder="例如：怀旧,依依不舍,扭头回望,眼神坚定"
+                        required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>图片尺寸</label>
+                    <select id="size">
+                        <option value="1024x1024" selected>1024x1024（正方形）</option>
+                        <option value="1536x1024">1536x1024（横向）</option>
+                        <option value="1024x1536">1024x1536（竖向）</option>
+                        <option value="512x512">512x512（较快）</option>
+                    </select>
+                </div>
+
+                <button type="button" onclick="testPromptBuild()">🔍 测试提示词构建</button>
+                <button type="button" onclick="generateImage()">🎨 生成图片</button>
+            </form>
+
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>正在生成图片，请稍候（约10-30秒）...</p>
+            </div>
+
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/v1/storyboard-gen';
+
+        function loadSample1() {
+            document.getElementById('style_requirements').value = '漫画风格,黑白网点,清晰的线条,日式漫画';
+            document.getElementById('character_appearance').value = '年龄17岁,男性,身高178cm,黑色短发,清秀面容,穿着简单的灰色旅行装,背着行囊';
+            document.getElementById('scene_and_lighting').value = '山路,清晨,浓雾弥漫,太阳刚升起,金色阳光透过雾气';
+            document.getElementById('camera_and_composition').value = '中景镜头,从背后呈四分之三角度拍摄,聚焦人物背影';
+            document.getElementById('expression_and_action').value = '怀旧,依依不舍,扭头回望山上的家,眼神坚定但带着不舍';
+        }
+
+        function loadSample2() {
+            document.getElementById('style_requirements').value = '条漫风格,全彩,高清晰度,写实风格,恐怖氛围';
+            document.getElementById('character_appearance').value = '年龄22岁,女性,身高165cm,长发,穿着睡衣,脸色苍白';
+            document.getElementById('scene_and_lighting').value = '黑暗的公寓房间内,夜晚,闪电照亮,阴暗压抑';
+            document.getElementById('camera_and_composition').value = '特写镜头,低角度仰视角色,聚焦面部表情';
+            document.getElementById('expression_and_action').value = '恐惧,惊恐万分,睁大眼睛,嘴巴微张,身体紧缩在角落';
+        }
+
+        function loadSample3() {
+            document.getElementById('style_requirements').value = '热血漫画风格,动态线条,强烈对比,黑白高对比度';
+            document.getElementById('character_appearance').value = '年龄25岁,男性,身高185cm,肌肉发达,战斗装束,短发';
+            document.getElementById('scene_and_lighting').value = '竞技场,午后,强烈日光,尘土飞扬';
+            document.getElementById('camera_and_composition').value = '广角镜头,低角度仰拍,突出力量感,动感构图';
+            document.getElementById('expression_and_action').value = '战斗,激烈出拳,表情坚毅,充满力量,汗水飞溅';
+        }
+
+        async function testPromptBuild() {
+            const data = getFormData();
+            if (!data) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/test-prompt-build`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.ok) {
+                    document.getElementById('result').innerHTML = `
+                        <div class="result">
+                            <h3>✅ 提示词构建成功</h3>
+                            <div class="prompt-display">
+                                <h4>组合后的完整提示词：</h4>
+                                <pre>${result.prompt}</pre>
+                            </div>
+                            <div class="prompt-display">
+                                <h4>字段分解：</h4>
+                                <pre>${JSON.stringify(result.field_breakdown, null, 2)}</pre>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    showError(result.detail || '提示词构建失败');
+                }
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        async function generateImage() {
+            const data = getFormData();
+            if (!data) return;
+
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('result').innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/generate-from-fields`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.ok) {
+                    document.getElementById('result').innerHTML = `
+                        <div class="result">
+                            <h3>✅ 图片生成成功</h3>
+                            <div class="prompt-display">
+                                <h4>使用的提示词：</h4>
+                                <pre>${result.prompt_used}</pre>
+                            </div>
+                            <div class="image-container">
+                                <img src="${result.image.url}" alt="生成的分镜图片" />
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    showError(result.detail || '图片生成失败');
+                }
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+            }
+        }
+
+        function getFormData() {
+            const style_requirements = document.getElementById('style_requirements').value.trim();
+            const character_appearance = document.getElementById('character_appearance').value.trim();
+            const scene_and_lighting = document.getElementById('scene_and_lighting').value.trim();
+            const camera_and_composition = document.getElementById('camera_and_composition').value.trim();
+            const expression_and_action = document.getElementById('expression_and_action').value.trim();
+            const size = document.getElementById('size').value;
+
+            if (!style_requirements || !character_appearance || !scene_and_lighting ||
+                !camera_and_composition || !expression_and_action) {
+                alert('请填写所有必填字段');
+                return null;
+            }
+
+            return {
+                style_requirements,
+                character_appearance,
+                scene_and_lighting,
+                camera_and_composition,
+                expression_and_action,
+                size
+            };
+        }
+
+        function showError(message) {
+            document.getElementById('result').innerHTML = `
+                <div class="result" style="border-left-color: #f44336;">
+                    <h3 style="color: #f44336;">❌ 错误</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // 页面加载时自动填充样例1
+        window.addEventListener('load', () => {
+            loadSample1();
+        });
+    </script>
+</body>
+
+</html>

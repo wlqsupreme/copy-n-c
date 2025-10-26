@@ -298,7 +298,7 @@ async def create_storyboard_panel(
     source_text_id: str, 
     panel_index: int, 
     panel_data: dict, 
-    character_id: Optional[str] = None
+    name_to_id_map: Optional[Dict[str, str]] = None
 ) -> Optional[StoryboardPanel]:
     """
     创建一条新的分镜面板记录
@@ -308,12 +308,27 @@ async def create_storyboard_panel(
         source_text_id: 原文ID
         panel_index: 面板索引
         panel_data: 面板数据字典
-        character_id: 角色ID（可选）
+        name_to_id_map: 角色名称到ID的映射字典
         
     Returns:
         Optional[StoryboardPanel]: 创建的分镜面板对象或None
     """
     try:
+        # 处理 panel_elements，将角色名称转换为角色ID
+        panel_elements = panel_data.get("panel_elements", [])
+        processed_elements = []
+        
+        if panel_elements and name_to_id_map:
+            for element in panel_elements:
+                character_name = element.get("character_name")
+                dialogue = element.get("dialogue")
+                character_id = name_to_id_map.get(character_name) if character_name else None
+                
+                processed_elements.append({
+                    "character_id": character_id,
+                    "dialogue": dialogue
+                })
+        
         storyboard_data = {
             StoryboardFields.STORYBOARD_ID: str(uuid.uuid4()),
             StoryboardFields.PROJECT_ID: project_id,
@@ -325,7 +340,7 @@ async def create_storyboard_panel(
             StoryboardFields.CAMERA_AND_COMPOSITION: panel_data.get("camera_and_composition"),
             StoryboardFields.EXPRESSION_AND_ACTION: panel_data.get("expression_and_action"),
             StoryboardFields.STYLE_REQUIREMENTS: panel_data.get("style_requirements"),
-            StoryboardFields.CHARACTER_ID: character_id
+            StoryboardFields.PANEL_ELEMENTS: processed_elements
         }
         result = await db_client.insert(TableNames.STORYBOARDS, storyboard_data)
         if result:

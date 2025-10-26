@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漫画对话框自动生成测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .info-box h4 {
+            margin-bottom: 10px;
+            color: #1976d2;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+        }
+
+        .info-box li {
+            margin: 5px 0;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .storyboard-list {
+            margin-top: 20px;
+        }
+
+        .storyboard-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .storyboard-item h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .storyboard-field {
+            margin: 8px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .storyboard-field strong {
+            color: #666;
+            display: inline-block;
+            width: 150px;
+        }
+
+        .dialogue-highlight {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+            margin: 10px 0;
+        }
+
+        .dialogue-highlight strong {
+            color: #856404;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .result h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .image-container {
+            margin-top: 20px;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .comparison-item {
+            text-align: center;
+        }
+
+        .comparison-item h4 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            padding: 8px 20px;
+            font-size: 14px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .pagination button {
+            padding: 8px 16px;
+            font-size: 14px;
+            min-width: 80px;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .page-info {
+            margin: 0 15px;
+            font-size: 14px;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .pagination .total-info {
+            margin-left: 20px;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 漫画对话框自动生成测试</h1>
+            <p>AI生成纯画面 + 自动添加对话框 = 完整漫画分镜</p>
+        </div>
+
+        <div class="content">
+            <div class="info-box">
+                <h4>🎯 功能说明</h4>
+                <ul>
+                    <li><strong>图文分离：</strong>AI生成纯视觉画面（不含文字），避免中文乱码问题</li>
+                    <li><strong>自动定位：</strong>系统自动识别对话内容，智能放置对话框位置</li>
+                    <li><strong>专业效果：</strong>使用漫画专业对话框样式和中文字体</li>
+                    <li><strong>一键生成：</strong>从数据库读取分镜数据，自动生成完整漫画</li>
+                </ul>
+            </div>
+
+            <!-- 手动测试区域 -->
+            <div class="info-box" style="background: #fff3cd; border-left-color: #ffc107;">
+                <h4 style="color: #856404;">✍️ 手动测试对话框功能（无需数据库）</h4>
+                <p style="color: #856404; margin-bottom: 15px;">直接输入画面描述和对话内容，快速测试对话框效果！</p>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #333;">
+                        🎨 画面描述（提示词）：
+                    </label>
+                    <textarea id="manualPrompt"
+                        style="width: 100%; height: 100px; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;"
+                        placeholder="例如：一个少年站在山顶，背着行囊，回头望向远方，清晨的雾气环绕，漫画风格，黑白线条">漫画风格，黑白线条。一个17岁的少年，黑色长发马尾，穿着蓝色武道袍，背着竹制背包和剑。站在山路上，清晨浓雾，阳光漫射。中景镜头，从背后呈四分之三角度，聚焦于角色回望山顶。表情怀旧，依依不舍，扭头回望，静止站立。</textarea>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #333;">
+                        💬 对话内容（多个对话用 | 分隔）：
+                    </label>
+                    <input id="manualDialogue" type="text"
+                        style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;"
+                        placeholder="例如：李慕白：师父，我一定会学有所成的！ | 旁白：少年踏上了新的旅程。" value="李慕白：师父，我一定会学有所成的！" />
+                    <small style="color: #856404;">提示：可以输入多个对话，用 | 分隔，系统会自动定位到不同位置</small>
+                </div>
+
+                <button onclick="generateManualTest()"
+                    style="background: linear-gradient(135deg, #ff9800 0%, #ff5722 100%); font-size: 16px; padding: 12px 30px;">
+                    🚀 立即生成测试（不依赖数据库）
+                </button>
+            </div>
+
+            <hr style="margin: 30px 0; border: none; border-top: 2px solid #eee;">
+
+            <h3 style="margin-bottom: 15px; color: #667eea;">📚 或从数据库读取分镜</h3>
+            <button onclick="loadStoryboards()">📚 加载数据库分镜列表（第1页）</button>
+            <button onclick="testConnection()">🔍 测试数据库连接</button>
+
+            <!-- 分页控制 -->
+            <div id="pagination" class="pagination" style="display: none;">
+                <button onclick="loadPreviousPage()" id="prevBtn">⬅️ 上一页</button>
+                <span class="page-info">
+                    第 <span id="currentPage">1</span> 页
+                </span>
+                <button onclick="loadNextPage()" id="nextBtn">下一页 ➡️</button>
+                <span class="total-info">
+                    （共 <span id="totalCount">0</span> 条数据，每页10条）
+                </span>
+            </div>
+
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>生成中...</p>
+            </div>
+
+            <div id="storyboardList" class="storyboard-list"></div>
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/v1/storyboard-gen';
+        const TEXT_TO_IMAGE_API = 'http://localhost:8000/api/v1/text-to-image';
+
+        // 分页状态
+        let currentPage = 1;
+        let pageSize = 10;
+        let totalCount = 0;
+
+        // 手动测试对话框功能
+        async function generateManualTest() {
+            const prompt = document.getElementById('manualPrompt').value.trim();
+            const dialogueInput = document.getElementById('manualDialogue').value.trim();
+
+            if (!prompt) {
+                showMessage('error', '请输入画面描述！');
+                return;
+            }
+
+            if (!dialogueInput) {
+                showMessage('error', '请输入对话内容！');
+                return;
+            }
+
+            showLoading();
+            document.getElementById('loading').innerHTML = `
+                <div class="spinner"></div>
+                <p>第1步：AI生成纯画面（不含文字）...</p>
+                <p>第2步：自动添加对话框...</p>
+                <p>请稍候（约10-30秒）...</p>
+            `;
+
+            try {
+                // 第1步：生成纯画面
+                console.log('🎨 开始生成纯画面...');
+                const imageResponse = await fetch(`${TEXT_TO_IMAGE_API}/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        size: '1024x1024',
+                        quality: 'standard',
+                        style: 'vivid'
+                    })
+                });
+
+                if (!imageResponse.ok) {
+                    throw new Error('图片生成失败');
+                }
+
+                const imageData = await imageResponse.json();
+                console.log('✅ 纯画面生成成功');
+
+                // 第2步：添加对话框
+                console.log('🎨 开始添加对话框...');
+
+                // 解析对话内容（支持 | 分隔多个对话）
+                const dialogues = dialogueInput.split('|').map(d => ({
+                    text: d.trim(),
+                    bubble_type: 'speech'
+                }));
+
+                // 调用后端对话框合成API
+                const composeResponse = await fetch('http://localhost:8000/api/v1/dialogue/compose', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        image_base64: imageData.image.url,
+                        dialogues: dialogues,
+                        camera_angle: null
+                    })
+                });
+
+                let finalImageUrl = imageData.image.url;
+                let hasDialogue = false;
+
+                if (composeResponse.ok) {
+                    const composeData = await composeResponse.json();
+                    finalImageUrl = composeData.image;
+                    hasDialogue = true;
+                    console.log('✅ 对话框添加成功');
+                } else {
+                    console.warn('⚠️ 对话框添加失败，显示原图');
+                }
+
+                // 显示结果
+                displayManualTestResult({
+                    prompt: prompt,
+                    dialogues: dialogues,
+                    imageUrl: finalImageUrl,
+                    originalImageUrl: imageData.image.url,
+                    hasDialogue: hasDialogue
+                });
+
+                console.log('✅ 测试完成');
+
+            } catch (error) {
+                console.error('❌ 生成失败:', error);
+                showMessage('error', `生成失败: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayManualTestResult(data) {
+            const resultDiv = document.getElementById('result');
+
+            const dialogueList = data.dialogues.map((d, i) =>
+                `<li>对话 #${i + 1}: ${d.text}</li>`
+            ).join('');
+
+            resultDiv.innerHTML = `
+                <div class="result">
+                    <h3>✅ 测试生成成功！</h3>
+                    
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <h4 style="color: #1976d2;">📝 使用的提示词：</h4>
+                        <p style="color: #1976d2; font-size: 14px; margin-top: 10px;">${data.prompt}</p>
+                    </div>
+                    
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <h4 style="color: #856404;">💬 对话内容：</h4>
+                        <ul style="color: #856404; margin-left: 20px; margin-top: 10px;">
+                            ${dialogueList}
+                        </ul>
+                    </div>
+
+                    <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <h4 style="color: #2e7d32;">🎯 生成流程：</h4>
+                        <p style="color: #2e7d32; margin-top: 10px;">
+                            ✅ 第1步：AI已生成纯画面（无文字）<br>
+                            ${data.hasDialogue ? '✅ 第2步：对话框已自动添加！' : '⚠️ 第2步：对话框添加失败（检查后端服务）'}<br>
+                            💡 ${data.hasDialogue ? '图文分离完成，文字清晰无乱码！' : '请确保后端服务正常运行'}
+                        </p>
+                    </div>
+                    
+                    <div class="image-container">
+                        <h4>📸 ${data.hasDialogue ? '最终效果（含对话框）' : '生成的纯画面'}：</h4>
+                        <img src="${data.imageUrl}" alt="${data.hasDialogue ? '完整漫画' : '纯画面'}" />
+                        <p style="text-align:center; ${data.hasDialogue ? 'color:#4CAF50; font-weight:bold;' : 'color:#666;'} margin-top:10px;">
+                            ${data.hasDialogue ? '✨ 对话框已自动添加！文字清晰，无乱码！' : '纯画面，未添加对话框'}
+                        </p>
+                    </div>
+
+                    ${!data.hasDialogue ? `
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <h4 style="color: #856404;">🔍 troubleshooting：</h4>
+                        <ol style="color: #856404; margin-left: 20px; margin-top: 10px;">
+                            <li>检查后端服务是否正常运行</li>
+                            <li>检查是否已安装 Pillow 库: pip install Pillow==10.3.0</li>
+                            <li>查看浏览器控制台和后端日志查找错误</li>
+                        </ol>
+                    </div>
+                    ` : `
+                    <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <h4 style="color: #2e7d32;">✅ 测试成功！</h4>
+                        <p style="color: #2e7d32; margin-top: 10px;">
+                            对话框功能正常工作！你可以：<br>
+                            1. 尝试输入不同的对话内容（支持 | 分隔多个对话）<br>
+                            2. 在数据库中添加 dialogue 字段后使用完整功能<br>
+                            3. 集成到Vue前端项目中
+                        </p>
+                    </div>
+                    `}
+                </div>
+            `;
+
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function testConnection() {
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+
+                if (data.ok) {
+                    showMessage('success', `
+                        ✅ 连接成功<br>
+                        数据库状态: ${data.database_connected ? '已连接' : '未连接'}<br>
+                        服务: ${data.service}
+                    `);
+                } else {
+                    showMessage('error', '连接失败');
+                }
+            } catch (error) {
+                showMessage('error', `连接错误: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadStoryboards(page = 1) {
+            showLoading();
+            document.getElementById('storyboardList').innerHTML = '';
+            document.getElementById('result').innerHTML = '';
+
+            currentPage = page;
+            const offset = (page - 1) * pageSize;
+
+            try {
+                // 修改：使用分页参数 limit 和 offset
+                const response = await fetch(`${API_BASE}/list-storyboards?limit=${pageSize}&offset=${offset}`);
+                const data = await response.json();
+
+                if (response.ok && data.ok) {
+                    totalCount = data.count; // 保存总数
+                    displayStoryboards(data.storyboards);
+                    updatePagination();
+                    showMessage('success', `✅ 成功加载第 ${page} 页（共 ${data.count} 条数据）`);
+                } else {
+                    showMessage('error', data.detail || '加载失败');
+                }
+            } catch (error) {
+                showMessage('error', `加载错误: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // 加载上一页
+        function loadPreviousPage() {
+            if (currentPage > 1) {
+                loadStoryboards(currentPage - 1);
+            }
+        }
+
+        // 加载下一页
+        function loadNextPage() {
+            const totalPages = Math.ceil(totalCount / pageSize);
+            if (currentPage < totalPages) {
+                loadStoryboards(currentPage + 1);
+            }
+        }
+
+        // 更新分页控件状态
+        function updatePagination() {
+            const paginationDiv = document.getElementById('pagination');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const currentPageSpan = document.getElementById('currentPage');
+            const totalCountSpan = document.getElementById('totalCount');
+
+            // 显示分页控件
+            paginationDiv.style.display = 'flex';
+
+            // 更新页码显示
+            currentPageSpan.textContent = currentPage;
+            totalCountSpan.textContent = totalCount;
+
+            // 更新按钮状态
+            const totalPages = Math.ceil(totalCount / pageSize);
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages || totalCount === 0;
+        }
+
+        function displayStoryboards(storyboards) {
+            const listDiv = document.getElementById('storyboardList');
+
+            if (storyboards.length === 0) {
+                listDiv.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">当前页没有数据</p>';
+                return;
+            }
+
+            const startIndex = (currentPage - 1) * pageSize;
+            let html = `<h3 style="margin-bottom:15px;">数据库分镜列表 - 第 ${currentPage} 页（包含对话内容）</h3>`;
+
+            storyboards.forEach((item, index) => {
+                const globalIndex = startIndex + index + 1; // 全局索引
+
+                // 检查 panel_elements 字段中是否有对话
+                let hasDialogue = false;
+                let dialoguePreview = "无";
+
+                try {
+                    if (item.panel_elements) {
+                        const panelElements = typeof item.panel_elements === 'string'
+                            ? JSON.parse(item.panel_elements)
+                            : item.panel_elements;
+
+                        if (Array.isArray(panelElements) && panelElements.length > 0) {
+                            const dialogueItems = panelElements.filter(el => el.dialogue && el.dialogue.trim());
+                            if (dialogueItems.length > 0) {
+                                hasDialogue = true;
+                                dialoguePreview = dialogueItems.map(el =>
+                                    `${el.characterid ? '[角色ID:' + el.characterid + '] ' : ''}${el.dialogue}`
+                                ).join(' | ');
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('解析 panel_elements 失败:', e);
+                }
+
+                html += `
+                    <div class="storyboard-item">
+                        <h4>分镜 #${globalIndex} ${item.storyboard_id ? `(ID: ${item.storyboard_id.substring(0, 8)}...)` : ''}</h4>
+                        <div class="storyboard-field">
+                            <strong>原文片段:</strong> ${truncate(item.original_text_snippet || '-', 50)}
+                        </div>
+                        <div class="storyboard-field">
+                            <strong>角色外观:</strong> ${item.character_appearance || '-'}
+                        </div>
+                        <div class="storyboard-field">
+                            <strong>场景光线:</strong> ${item.scene_and_lighting || '-'}
+                        </div>
+                        <div class="storyboard-field">
+                            <strong>镜头构图:</strong> ${item.camera_and_composition || '-'}
+                        </div>
+                        <div class="storyboard-field">
+                            <strong>表情动作:</strong> ${item.expression_and_action || '-'}
+                        </div>
+                        <div class="storyboard-field">
+                            <strong>风格要求:</strong> ${item.style_requirements || '-'}
+                        </div>
+                        ${hasDialogue ? `
+                            <div class="dialogue-highlight">
+                                <strong>💬 对话内容 (panel_elements):</strong><br>
+                                <span style="font-size: 14px;">${dialoguePreview}</span>
+                                <br><small style="color:#856404;">⚡ 将自动关联 characters 表并添加对话框！</small>
+                            </div>
+                        ` : '<div class="storyboard-field"><strong>对话:</strong> 无 (panel_elements 为空)</div>'}
+                        <button class="generate-btn" onclick="generateImage('${item.storyboard_id}')">
+                            🎨 生成完整漫画${hasDialogue ? '（含对话框）' : ''}
+                        </button>
+                    </div>
+                `;
+            });
+
+            listDiv.innerHTML = html;
+        }
+
+        async function generateImage(storyboardId) {
+            showLoading();
+            document.getElementById('loading').innerHTML = `
+                <div class="spinner"></div>
+                <p>正在从数据库读取数据...</p>
+                <p>正在生成纯画面...</p>
+                <p>正在添加对话框...</p>
+                <p>请稍候（约10-30秒）...</p>
+            `;
+
+            try {
+                const response = await fetch(`${API_BASE}/generate-from-db/${storyboardId}?size=1024x1024`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.ok) {
+                    displayResult(data);
+                } else {
+                    showMessage('error', data.detail || '生成失败');
+                }
+            } catch (error) {
+                showMessage('error', `生成错误: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayResult(data) {
+            const resultDiv = document.getElementById('result');
+
+            const hasDialogue = data.has_dialogue;
+
+            resultDiv.innerHTML = `
+                <div class="result">
+                    <h3>✅ ${data.message}</h3>
+                    
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                        <h4 style="color: #856404; margin-bottom: 10px;">🎨 生成流程：</h4>
+                        <ol style="color: #856404; margin-left: 20px;">
+                            <li>AI生成纯画面（不含文字）✅</li>
+                            <li>${hasDialogue ? '自动添加对话框 ✅' : '无对话内容，跳过 ⚪'}</li>
+                            <li>返回完整漫画 ✅</li>
+                        </ol>
+                    </div>
+                    
+                    ${hasDialogue ? `
+                        <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                            <h4 style="color: #2e7d32;">💬 对话内容（${data.dialogue_count} 条）：</h4>
+                            <div style="margin-top: 10px;">
+                                ${data.dialogues ? data.dialogues.map((d, idx) => `
+                                    <div style="background: white; padding: 10px; border-radius: 5px; margin: 8px 0; border-left: 4px solid #4CAF50;">
+                                        <strong style="color: #2e7d32;">${d.speaker || '旁白'}：</strong>
+                                        <span style="color: #333;">${d.text}</span>
+                                    </div>
+                                `).join('') : '<p style="color: #2e7d32;">无对话数据</p>'}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="image-container">
+                        <h4>📸 最终效果：</h4>
+                        <img src="${data.image.url}" alt="生成的完整漫画分镜" />
+                        ${hasDialogue ? '<p style="text-align:center; color:#4CAF50; margin-top:10px; font-weight:bold;">✨ 对话框已自动添加！文字清晰无乱码！</p>' : ''}
+                    </div>
+                </div>
+            `;
+
+            // 滚动到结果
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('active');
+        }
+
+        function showMessage(type, message) {
+            const resultDiv = document.getElementById('result');
+            const color = type === 'success' ? '#4CAF50' : '#f44336';
+            resultDiv.innerHTML = `
+                <div class="result" style="border-left-color: ${color};">
+                    <h3 style="color: ${color};">${type === 'success' ? '✅' : '❌'} ${type === 'success' ? '成功' : '错误'}</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        function truncate(str, length) {
+            if (!str) return '-';
+            return str.length > length ? str.substring(0, length) + '...' : str;
+        }
+
+        // 页面加载时自动测试连接
+        window.addEventListener('load', () => {
+            testConnection();
+        });
+    </script>
+</body>
+
+</html>

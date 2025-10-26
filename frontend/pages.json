@@ -46,6 +46,20 @@
 				"navigationBarTitleText": "项目详情",
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			"path": "pages/image/text-to-image",
+			"style": {
+				"navigationBarTitleText": "文生图工具",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/image/comic-generator",
+			"style": {
+				"navigationBarTitleText": "生成漫画",
+				"navigationStyle": "custom"
+			}
 		}
 	],
 	"globalStyle": {

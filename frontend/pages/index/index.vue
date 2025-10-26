@@ -46,13 +46,13 @@
             <text class="feature-desc">AI自动解析小说情节、角色和场景</text>
           </view>
           
-          <view class="feature-card" @click="goToLayoutPlanner">
+          <view class="feature-card" @click="goToProjects">
             <view class="feature-icon">🎬</view>
             <text class="feature-title">专业分镜规划</text>
             <text class="feature-desc">可视化编辑分镜脚本，调整画面布局</text>
           </view>
           
-          <view class="feature-card" @click="showComingSoon">
+          <view class="feature-card" @click="goToTextToImage">
             <view class="feature-icon">🎨</view>
             <text class="feature-title">AI图像生成</text>
             <text class="feature-desc">智能生成漫画图像，一键完成创作</text>
@@ -132,6 +132,12 @@ export default {
     goToProjects() {
       uni.navigateTo({
         url: '/pages/projects/list'
+      })
+    },
+    
+    goToTextToImage() {
+      uni.navigateTo({
+        url: '/pages/image/text-to-image'
       })
     },
     

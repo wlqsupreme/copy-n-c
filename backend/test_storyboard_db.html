@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库分镜图片生成测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .storyboard-list {
+            margin-top: 20px;
+        }
+
+        .storyboard-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .storyboard-item h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .storyboard-field {
+            margin: 8px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .storyboard-field strong {
+            color: #666;
+            display: inline-block;
+            width: 180px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .result h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .image-container {
+            margin-top: 20px;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .prompt-display {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .prompt-display h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .prompt-display pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            padding: 8px 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗄️ 数据库分镜图片生成测试</h1>
+            <p>从数据库读取分镜数据并生成配图</p>
+        </div>
+
+        <div class="content">
+            <div class="info-box">
+                <h4>使用说明</h4>
+                <p>1. 点击"加载数据库分镜列表"查看数据库中的分镜数据</p>
+                <p>2. 选择任意分镜，点击"生成图片"按钮</p>
+                <p>3. 等待10-30秒，查看生成的图片</p>
+            </div>
+
+            <button onclick="loadStoryboards()">📚 加载数据库分镜列表</button>
+            <button onclick="testConnection()">🔍 测试数据库连接</button>
+
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>加载中...</p>
+            </div>
+
+            <div id="storyboardList" class="storyboard-list"></div>
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/v1/storyboard-gen';
+
+        async function testConnection() {
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+
+                if (data.ok) {
+                    showMessage('success', `
+                        ✅ 连接成功<br>
+                        数据库状态: ${data.database_connected ? '已连接' : '未连接'}<br>
+                        服务: ${data.service}
+                    `);
+                } else {
+                    showMessage('error', '连接失败');
+                }
+            } catch (error) {
+                showMessage('error', `连接错误: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function loadStoryboards() {
+            showLoading();
+            document.getElementById('storyboardList').innerHTML = '';
+            document.getElementById('result').innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/list-storyboards?limit=20`);
+                const data = await response.json();
+
+                if (response.ok && data.ok) {
+                    displayStoryboards(data.storyboards);
+                    showMessage('success', `✅ 成功加载 ${data.count} 条分镜数据`);
+                } else {
+                    showMessage('error', data.detail || '加载失败');
+                }
+            } catch (error) {
+                showMessage('error', `加载错误: ${error.message}<br><br>
+                    <strong>可能的原因：</strong><br>
+                    1. 后端服务未启动<br>
+                    2. 数据库未连接<br>
+                    3. storyboards 表不存在`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayStoryboards(storyboards) {
+            const listDiv = document.getElementById('storyboardList');
+
+            if (storyboards.length === 0) {
+                listDiv.innerHTML = '<p style="text-align:center; padding:20px; color:#999;">数据库中没有分镜数据</p>';
+                return;
+            }
+
+            let html = '<h3 style="margin-bottom:15px;">数据库分镜列表</h3>';
+
+            storyboards.forEach((item, index) => {
+                // 修改说明：数据库表中的主键列名是 storyboard_id，不是 id
+                html += `
+                    <div class="storyboard-item">
+                        <h4>分镜 #${index + 1} ${item.storyboard_id ? `(ID: ${item.storyboard_id.substring(0, 8)}...)` : ''}</h4>
+                        <div class="storyboard-field">
+                            <strong>原文片段:</strong> ${truncate(item.original_text_snippet || '-', 50)}
+                        </div>
+                        <div class="storyboard-field">
+                            <strong>角色外观:</strong> ${item.character_appearance || '-'}
+                        </div>
+                        <div class="storyboard-field">
+                            <strong>场景光线:</strong> ${item.scene_and_lighting || '-'}
+                        </div>
+                        <div class="storyboard-field">
+                            <strong>镜头构图:</strong> ${item.camera_and_composition || '-'}
+                        </div>
+                        <div class="storyboard-field">
+                            <strong>表情动作:</strong> ${item.expression_and_action || '-'}
+                        </div>
+                        <div class="storyboard-field">
+                            <strong>风格要求:</strong> ${item.style_requirements || '-'}
+                        </div>
+                        <button class="generate-btn" onclick="generateImage('${item.storyboard_id}')">
+                            🎨 生成图片
+                        </button>
+                    </div>
+                `;
+            });
+
+            listDiv.innerHTML = html;
+        }
+
+        async function generateImage(storyboardId) {
+            showLoading();
+            document.getElementById('loading').innerHTML = `
+                <div class="spinner"></div>
+                <p>正在从数据库读取数据...</p>
+                <p>正在生成图片，请稍候（约10-30秒）...</p>
+            `;
+
+            try {
+                const response = await fetch(`${API_BASE}/generate-from-db/${storyboardId}?size=1024x1024`, {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.ok) {
+                    displayResult(data);
+                } else {
+                    showMessage('error', data.detail || '生成失败');
+                }
+            } catch (error) {
+                showMessage('error', `生成错误: ${error.message}`);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayResult(data) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <div class="result">
+                    <h3>✅ 图片生成成功</h3>
+                    
+                    <div class="prompt-display">
+                        <h4>分镜ID:</h4>
+                        <pre>${data.storyboard_id}</pre>
+                    </div>
+                    
+                    <div class="prompt-display">
+                        <h4>原始分镜数据:</h4>
+                        <pre>${JSON.stringify(data.storyboard_data, null, 2)}</pre>
+                    </div>
+                    
+                    <div class="prompt-display">
+                        <h4>生成的提示词:</h4>
+                        <pre>${data.prompt_used}</pre>
+                    </div>
+                    
+                    <div class="image-container">
+                        <img src="${data.image.url}" alt="生成的分镜图片" />
+                    </div>
+                </div>
+            `;
+
+            // 滚动到结果
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('active');
+        }
+
+        function showMessage(type, message) {
+            const resultDiv = document.getElementById('result');
+            const color = type === 'success' ? '#4CAF50' : '#f44336';
+            resultDiv.innerHTML = `
+                <div class="result" style="border-left-color: ${color};">
+                    <h3 style="color: ${color};">${type === 'success' ? '✅' : '❌'} ${type === 'success' ? '成功' : '错误'}</h3>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        function truncate(str, length) {
+            if (!str) return '-';
+            return str.length > length ? str.substring(0, length) + '...' : str;
+        }
+
+        // 页面加载时自动测试连接
+        window.addEventListener('load', () => {
+            testConnection();
+        });
+    </script>
+</body>
+
+</html>

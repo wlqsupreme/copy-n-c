@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图生文API测试工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="file"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+
+        .result pre {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            margin-top: 10px;
+            border-radius: 8px;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+
+        .info-box h4 {
+            color: #1976D2;
+            margin-bottom: 8px;
+        }
+
+        .info-box p {
+            color: #424242;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖼️ 图生文API测试工具</h1>
+            <p>测试图片分析、OCR、场景描述等功能</p>
+        </div>
+
+        <div class="content">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('analyze')">图片分析</button>
+                <button class="tab" onclick="switchTab('ocr')">OCR提取</button>
+                <button class="tab" onclick="switchTab('scene')">场景描述</button>
+                <button class="tab" onclick="switchTab('upload')">上传图片</button>
+                <button class="tab" onclick="switchTab('batch')">批量分析</button>
+            </div>
+
+            <!-- 图片分析 -->
+            <div id="analyze" class="tab-content active">
+                <div class="info-box">
+                    <h4>图片内容分析</h4>
+                    <p>输入图片URL或上传图片，AI将详细描述图片的内容、场景、人物等信息。</p>
+                </div>
+                <div class="form-group">
+                    <label>图片URL</label>
+                    <input type="text" id="analyzeUrl" placeholder="https://example.com/image.jpg"
+                        value="https://images.unsplash.com/photo-1506905925346-21bda4d32df4">
+                </div>
+                <div class="form-group">
+                    <label>自定义提示词（可选）</label>
+                    <textarea id="analyzePrompt" placeholder="例如：请详细描述这张图片的内容">请详细描述这张图片的内容，包括场景、人物、物品、氛围等</textarea>
+                </div>
+                <button onclick="analyzeImage()">🔍 分析图片</button>
+                <div id="analyzeLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在分析图片，请稍候...</p>
+                </div>
+                <div id="analyzeResult"></div>
+            </div>
+
+            <!-- OCR提取 -->
+            <div id="ocr" class="tab-content">
+                <div class="info-box">
+                    <h4>OCR文字提取</h4>
+                    <p>从图片中识别和提取文字内容，支持多种语言。</p>
+                </div>
+                <div class="form-group">
+                    <label>图片URL</label>
+                    <input type="text" id="ocrUrl" placeholder="https://example.com/document.jpg"
+                        value="https://images.unsplash.com/photo-1519682337058-a94d519337bc">
+                </div>
+                <button onclick="extractText()">📝 提取文字</button>
+                <div id="ocrLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在提取文字，请稍候...</p>
+                </div>
+                <div id="ocrResult"></div>
+            </div>
+
+            <!-- 场景描述 -->
+            <div id="scene" class="tab-content">
+                <div class="info-box">
+                    <h4>场景描述生成</h4>
+                    <p>生成适合漫画分镜的场景描述，包括镜头类型、人物动作、场景元素等。</p>
+                </div>
+                <div class="form-group">
+                    <label>图片URL</label>
+                    <input type="text" id="sceneUrl" placeholder="https://example.com/scene.jpg"
+                        value="https://images.unsplash.com/photo-1506905925346-21bda4d32df4">
+                </div>
+                <div class="form-group">
+                    <label>描述风格</label>
+                    <select id="sceneStyle">
+                        <option value="storyboard">分镜风格（推荐）</option>
+                        <option value="detailed">详细描述</option>
+                        <option value="simple">简洁描述</option>
+                    </select>
+                </div>
+                <button onclick="generateScene()">🎬 生成描述</button>
+                <div id="sceneLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在生成场景描述，请稍候...</p>
+                </div>
+                <div id="sceneResult"></div>
+            </div>
+
+            <!-- 上传图片 -->
+            <div id="upload" class="tab-content">
+                <div class="info-box">
+                    <h4>上传本地图片</h4>
+                    <p>上传本地图片文件，系统会自动分析并返回结果。支持jpg、png等格式，最大10MB。</p>
+                </div>
+                <div class="form-group">
+                    <label>选择图片文件</label>
+                    <input type="file" id="uploadFile" accept="image/*" onchange="previewImage(this)">
+                    <img id="uploadPreview" class="image-preview" style="display:none;">
+                </div>
+                <button onclick="uploadImage()">📤 上传并分析</button>
+                <div id="uploadLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在上传和分析，请稍候...</p>
+                </div>
+                <div id="uploadResult"></div>
+            </div>
+
+            <!-- 批量分析 -->
+            <div id="batch" class="tab-content">
+                <div class="info-box">
+                    <h4>批量图片分析</h4>
+                    <p>一次性分析多张图片（最多20张），每行一个图片URL。</p>
+                </div>
+                <div class="form-group">
+                    <label>图片URL列表（每行一个）</label>
+                    <textarea id="batchUrls" rows="5" placeholder="https://example.com/image1.jpg
+https://example.com/image2.jpg
+https://example.com/image3.jpg">https://images.unsplash.com/photo-1506905925346-21bda4d32df4
+https://images.unsplash.com/photo-1519682337058-a94d519337bc</textarea>
+                </div>
+                <div class="form-group">
+                    <label>自定义提示词（可选）</label>
+                    <input type="text" id="batchPrompt" placeholder="请简单描述这张图片">
+                </div>
+                <button onclick="batchAnalyze()">📚 批量分析</button>
+                <div id="batchLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>正在批量分析，请稍候...</p>
+                </div>
+                <div id="batchResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8888/api/v1/image';
+
+        function switchTab(tabName) {
+            // 隐藏所有tab内容
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            // 显示选中的tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function showLoading(id) {
+            document.getElementById(id + 'Loading').classList.add('active');
+        }
+
+        function hideLoading(id) {
+            document.getElementById(id + 'Loading').classList.remove('active');
+        }
+
+        function showResult(id, data, error = false) {
+            const resultDiv = document.getElementById(id + 'Result');
+            if (error) {
+                resultDiv.innerHTML = `
+                    <div class="result" style="border-left-color: #f44336;">
+                        <h3 style="color: #f44336;">❌ 错误</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="result">
+                        <h3>✅ 结果</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        async function analyzeImage() {
+            const url = document.getElementById('analyzeUrl').value;
+            const prompt = document.getElementById('analyzePrompt').value;
+
+            if (!url) {
+                alert('请输入图片URL');
+                return;
+            }
+
+            showLoading('analyze');
+
+            try {
+                const response = await fetch(`${API_BASE}/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_url: url, prompt: prompt || undefined })
+                });
+
+                const data = await response.json();
+                showResult('analyze', data, !response.ok);
+            } catch (error) {
+                showResult('analyze', { error: error.message }, true);
+            } finally {
+                hideLoading('analyze');
+            }
+        }
+
+        async function extractText() {
+            const url = document.getElementById('ocrUrl').value;
+
+            if (!url) {
+                alert('请输入图片URL');
+                return;
+            }
+
+            showLoading('ocr');
+
+            try {
+                const response = await fetch(`${API_BASE}/ocr`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_url: url })
+                });
+
+                const data = await response.json();
+                showResult('ocr', data, !response.ok);
+            } catch (error) {
+                showResult('ocr', { error: error.message }, true);
+            } finally {
+                hideLoading('ocr');
+            }
+        }
+
+        async function generateScene() {
+            const url = document.getElementById('sceneUrl').value;
+            const style = document.getElementById('sceneStyle').value;
+
+            if (!url) {
+                alert('请输入图片URL');
+                return;
+            }
+
+            showLoading('scene');
+
+            try {
+                const response = await fetch(`${API_BASE}/scene-description`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image_url: url, style: style })
+                });
+
+                const data = await response.json();
+                showResult('scene', data, !response.ok);
+            } catch (error) {
+                showResult('scene', { error: error.message }, true);
+            } finally {
+                hideLoading('scene');
+            }
+        }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const preview = document.getElementById('uploadPreview');
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function uploadImage() {
+            const fileInput = document.getElementById('uploadFile');
+            if (!fileInput.files || !fileInput.files[0]) {
+                alert('请选择图片文件');
+                return;
+            }
+
+            showLoading('upload');
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch(`${API_BASE}/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                showResult('upload', data, !response.ok);
+            } catch (error) {
+                showResult('upload', { error: error.message }, true);
+            } finally {
+                hideLoading('upload');
+            }
+        }
+
+        async function batchAnalyze() {
+            const urls = document.getElementById('batchUrls').value.split('\n').filter(u => u.trim());
+            const prompt = document.getElementById('batchPrompt').value;
+
+            if (urls.length === 0) {
+                alert('请输入至少一个图片URL');
+                return;
+            }
+
+            if (urls.length > 20) {
+                alert('最多支持20张图片');
+                return;
+            }
+
+            showLoading('batch');
+
+            const images = urls.map(url => ({ url: url.trim() }));
+
+            try {
+                const response = await fetch(`${API_BASE}/batch-analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ images: images, prompt: prompt || undefined })
+                });
+
+                const data = await response.json();
+                showResult('batch', data, !response.ok);
+            } catch (error) {
+                showResult('batch', { error: error.message }, true);
+            } finally {
+                hideLoading('batch');
+            }
+        }
+    </script>
+</body>
+
+</html>

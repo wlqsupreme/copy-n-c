@@ -169,8 +169,8 @@ async def generate_storyboard_for_segment(
 1. **分析用户文本**：阅读用户提供的文本片段。
 2. **生成分镜 (storyboards)**：
    * 为文本生成详细的分镜面板。
-   * `character_name` 必须与角色名称匹配。
    * `character_appearance` 必须生成，描述该分镜中角色的*特定*外貌、穿着或表情（例如"衣服破损"、"泪流满面"）。
+   * `panel_elements` 数组包含该分镜中的所有对话，每个元素包含角色名称和对话内容。
 3. **识别新角色 (characters)**：
    * **仅当**文本中出现了*不在*上面"本项目已经定义的角色"列表中的**新角色**时，才在`characters`数组中添加该角色的基础描述（`description`）。
    * 如果文本中的角色都*已存在*于列表中，请返回一个**空**的`characters`数组 ( `[]` )。
@@ -186,12 +186,15 @@ async def generate_storyboard_for_segment(
   "storyboards": [
     {{
       "original_text_snippet": "该分镜对应的原始文本片段",
-      "character_name": "主要角色名称 (必须是已存在或新角色)",
       "character_appearance": "该分镜中角色的*情景*外貌描述",
       "scene_and_lighting": "场景与光照描述",
       "camera_and_composition": "镜头与构图描述",
       "expression_and_action": "表情与动作描述",
-      "style_requirements": "风格要求描述"
+      "style_requirements": "风格要求描述",
+      "panel_elements": [
+        {{ "character_name": "角色名称", "dialogue": "对话内容" }},
+        {{ "character_name": "另一个角色", "dialogue": "另一段对话" }}
+      ]
     }}
   ]
 }}"""

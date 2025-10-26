@@ -195,344 +195,6 @@ python test_auth.py
 
 
 
-/*
- Navicat Premium Dump SQL
-
- Source Server         : n-c
- Source Server Type    : PostgreSQL
- Source Server Version : 170006 (170006)
- Source Host           : aws-1-ap-south-1.pooler.supabase.com:5432
- Source Catalog        : postgres
- Source Schema         : public
-
- Target Server Type    : PostgreSQL
- Target Server Version : 170006 (170006)
- File Encoding         : 65001
-
- Date: 26/10/2025 00:49:58
-*/
-
-
--- ----------------------------
--- Table structure for characters
--- ----------------------------
-DROP TABLE IF EXISTS "public"."characters";
-CREATE TABLE "public"."characters" (
-  "character_id" uuid NOT NULL DEFAULT gen_random_uuid(),
-  "project_id" uuid NOT NULL,
-  "name" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "description" text COLLATE "pg_catalog"."default",
-  "reference_image_urls" json,
-  "lora_model_path" varchar(1024) COLLATE "pg_catalog"."default",
-  "trigger_word" varchar(100) COLLATE "pg_catalog"."default"
-)
-;
-COMMENT ON COLUMN "public"."characters"."character_id" IS '唯一角色ID (UUID)';
-COMMENT ON COLUMN "public"."characters"."project_id" IS '外键，关联到 projects(project_id)';
-COMMENT ON COLUMN "public"."characters"."name" IS '角色名称 (例如 "张三")';
-COMMENT ON COLUMN "public"."characters"."description" IS '【角色外貌、性格描述】的详细描述 (例如：年龄, 性别, 身高, 体型, 发型, 发色, 眼睛, 穿着, 特殊配饰)(供大语言模型使用)';
-COMMENT ON COLUMN "public"."characters"."reference_image_urls" IS '角色参考图URL列表 (JSON数组格式, 存储S3/OSS的对象存储URL)';
-COMMENT ON COLUMN "public"."characters"."lora_model_path" IS '指向 S3/OSS 上的LoRA模型或Embedding文件路径 (例如 /models/lora/xxx.safetensors)';
-COMMENT ON COLUMN "public"."characters"."trigger_word" IS '触发该LoRA的关键词 (例如 "ohwx_zhangsan")';
-COMMENT ON TABLE "public"."characters" IS '项目角色表';
-
--- ----------------------------
--- Records of characters
--- ----------------------------
-INSERT INTO "public"."characters" VALUES ('c0a1b2c3-1111-4f5e-8d9c-0a2a3a4a5b01', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', '李慕白', '年龄17岁, 男性, 身高178cm, 身材修长, 黑色长发束成马尾, 黑色眼眸犀利, 穿着朴素的蓝色武道袍, 背着一个竹制背包和一把剑', '["https://cdn.example.com/ref/limubai_ref1.png"]', '/models/lora/project_a_limubai.safetensors', 'ohwx_limubai');
-INSERT INTO "public"."characters" VALUES ('c0a1b2c3-2222-4f5e-8d9c-0a2a3a4a5b02', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', '王珂', '年龄22岁, 女性, 身高165cm, 中等身材, 凌乱的黑色短发, 惊恐的大眼睛, 穿着宽大的T恤和短裤, 没有配饰', '["https://cdn.example.com/ref/wangke_ref1.png"]', '/models/lora/project_b_wangke.safetensors', 'ohwx_wangke');
-INSERT INTO "public"."characters" VALUES ('508b462f-dff8-4499-8d94-2b00dea1dc76', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '闵峙', '约35岁，男性，超A性别者（Enigma），身高约180 cm，体格健壮，常穿深色西装，眉宇间带有决断的气质，拥有异常强大的信息素能力。', '[]', NULL, NULL);
-INSERT INTO "public"."characters" VALUES ('659d5eb7-0a66-4eb8-90e7-35f5d8ad8ac5', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '付柏启', '约32岁，男性，S级Alpha，身高约185 cm，身形修长，容貌冷峻且极具魅力，常穿剪裁合体的商务西装，头发微湿，气质如高傲的天鹅。', '[]', NULL, NULL);
-
--- ----------------------------
--- Table structure for projects
--- ----------------------------
-DROP TABLE IF EXISTS "public"."projects";
-CREATE TABLE "public"."projects" (
-  "project_id" uuid NOT NULL DEFAULT gen_random_uuid(),
-  "user_id" uuid NOT NULL,
-  "title" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "description" text COLLATE "pg_catalog"."default",
-  "visibility" "public"."project_visibility" DEFAULT 'private'::project_visibility,
-  "default_style_prompt" text COLLATE "pg_catalog"."default",
-  "created_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
-  "updated_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
-  "upload_method" varchar(50) COLLATE "pg_catalog"."default" DEFAULT 'single_chapter'::character varying
-)
-;
-COMMENT ON COLUMN "public"."projects"."project_id" IS '唯一项目ID (UUID)';
-COMMENT ON COLUMN "public"."projects"."user_id" IS '外键，关联到 users(user_id)，表示该项目的所有者';
-COMMENT ON COLUMN "public"."projects"."title" IS '项目标题 (例如 "我的XX小说改编")';
-COMMENT ON COLUMN "public"."projects"."description" IS '项目描述';
-COMMENT ON COLUMN "public"."projects"."visibility" IS '可见性：private(仅自己), public(他人可见)';
-COMMENT ON COLUMN "public"."projects"."default_style_prompt" IS '项目的默认风格提示词 (例如 "shonen manga, high contrast")';
-COMMENT ON COLUMN "public"."projects"."created_at" IS '项目创建时间';
-COMMENT ON COLUMN "public"."projects"."updated_at" IS '项目最后更新时间';
-COMMENT ON TABLE "public"."projects" IS '漫画项目表';
-
--- ----------------------------
--- Records of projects
--- ----------------------------
-INSERT INTO "public"."projects" VALUES ('f47ac10b-58cc-4372-a567-0e02b2c3d479', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', '仙尘', '一部关于凡人修仙的小说改编项目', 'private', 'manga, black-and-white screentone, clean lineart, chinese ink style', '2025-10-23 17:55:37.636342+00', '2025-10-23 17:55:37.636342+00', 'single_chapter');
-INSERT INTO "public"."projects" VALUES ('f47ac10b-58cc-4372-a567-0e02b2c3d480', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', '都市夜归人', '现代都市背景下的奇幻故事', 'public', 'webtoon, full color, high clarity, dynamic actionpose', '2025-10-23 17:55:37.636342+00', '2025-10-23 17:55:37.636342+00', 'single_chapter');
-INSERT INTO "public"."projects" VALUES ('b7c63fe9-7c25-4122-bf59-0e9fcf34d4a6', '19602e5a-7e68-4e91-8b67-ee27d2f29bd5', '测试项目', '这是一个测试项目', 'private', NULL, '2025-10-24 01:37:31.277426+00', '2025-10-24 01:37:31.277426+00', 'single_chapter');
-INSERT INTO "public"."projects" VALUES ('e7e95647-4f6f-40ef-b78f-eba6760a3ed3', '20bf06fe-5cbd-4c14-94ea-6f54ca95bb70', '测试项目', '这是一个测试项目', 'private', NULL, '2025-10-24 07:28:11.744683+00', '2025-10-24 07:28:11.744683+00', 'single_chapter');
-INSERT INTO "public"."projects" VALUES ('c2349b00-6f52-4153-8e30-bf6e673066b3', '3f8f4023-9d72-4b69-a481-e5db08d91a58', '测试项目', '这是一个测试项目', 'private', NULL, '2025-10-25 07:04:10.974517+00', '2025-10-25 07:04:10.974517+00', 'single_chapter');
-INSERT INTO "public"."projects" VALUES ('07235a52-140e-4ea2-b9ad-b7fb173a59a1', 'e8195641-df6b-477a-af43-d7be5981436f', '干涸地', '', 'public', '', '2025-10-25 15:55:59.152459+00', '2025-10-25 15:55:59.152459+00', 'single_chapter');
-INSERT INTO "public"."projects" VALUES ('8889242a-bd61-411e-9ed6-934002ec4c4d', 'e8195641-df6b-477a-af43-d7be5981436f', '123', '', 'private', '', '2025-10-25 16:19:47.086359+00', '2025-10-25 16:19:47.086359+00', 'single_chapter');
-
--- ----------------------------
--- Table structure for source_texts
--- ----------------------------
-DROP TABLE IF EXISTS "public"."source_texts";
-CREATE TABLE "public"."source_texts" (
-  "text_id" uuid NOT NULL DEFAULT gen_random_uuid(),
-  "project_id" uuid NOT NULL,
-  "title" varchar(255) COLLATE "pg_catalog"."default" DEFAULT 'Untitled Chapter'::character varying,
-  "raw_content" text COLLATE "pg_catalog"."default" NOT NULL,
-  "order_index" int4 DEFAULT 0,
-  "created_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
-  "processing_status" varchar(32) COLLATE "pg_catalog"."default" DEFAULT 'pending'::character varying,
-  "error_message" text COLLATE "pg_catalog"."default",
-  "chapter_number" int4,
-  "chapter_name" varchar(255) COLLATE "pg_catalog"."default"
-)
-;
-COMMENT ON COLUMN "public"."source_texts"."text_id" IS '唯一文本ID (UUID)';
-COMMENT ON COLUMN "public"."source_texts"."project_id" IS '外键，关联到 projects(project_id)';
-COMMENT ON COLUMN "public"."source_texts"."title" IS '标题 (例如 "第一章" 或 "番外篇")';
-COMMENT ON COLUMN "public"."source_texts"."raw_content" IS '存储用户上传的原始小说文本 (PostgreSQL的TEXT类型已足够)';
-COMMENT ON COLUMN "public"."source_texts"."order_index" IS '用于章节或文本片段的排序';
-COMMENT ON COLUMN "public"."source_texts"."created_at" IS '上传时间';
-COMMENT ON COLUMN "public"."source_texts"."processing_status" IS 'AI处理状态 (pending, processing, completed, failed)';
-COMMENT ON COLUMN "public"."source_texts"."error_message" IS '处理失败时的错误信息';
-COMMENT ON COLUMN "public"."source_texts"."chapter_number" IS '章节编号（例如：1, 2, 3...）';
-COMMENT ON COLUMN "public"."source_texts"."chapter_name" IS '章节名称（例如："第一章：下山"）';
-COMMENT ON TABLE "public"."source_texts" IS '小说原文表';
-
--- ----------------------------
--- Records of source_texts
--- ----------------------------
-INSERT INTO "public"."source_texts" VALUES ('d1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2c', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', '第一章：下山', '清晨，雾气尚未散去，少年李慕白背着行囊，最后看了一眼山顶的茅屋，毅然转身下山。他不知道，此行将改变他的一生。', 0, '2025-10-23 17:55:37.857842+00', 'pending', NULL, 0, '第一章：下山');
-INSERT INTO "public"."source_texts" VALUES ('d1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2d', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', '序章：雨夜', '冰冷的雨水拍打在陈旧的窗户上。王珂缩在角落，借着闪电的光芒，她看到那个黑影又一次出现在了巷口。', 0, '2025-10-23 17:55:37.857842+00', 'pending', NULL, 0, '序章：雨夜');
-INSERT INTO "public"."source_texts" VALUES ('2235f7ae-93df-42fa-9450-0a08d4b97172', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', 'Untitled Chapter', '闵峙把手中厚厚的文件扔到一旁，捏着鼻梁站了起来。
-
-昨天暴雨下了一夜，到现在都还没停，雨点子直直地落到下去，窗上像是泼了水一样淅淅沥沥地淌着。
-
-透过模糊的玻璃，他看到公司门口的花坛边上站着个打着灰蓝色雨伞的男人。
-
-站了应该好一会了，裤脚都湿了大半，像是在等人。
-
-“叩叩.....”
-
-他收回视线，“进来。”
-
-一个身形修长的男人从外面走进办公室，“闵总，您找我？”
-
-见是付柏启，闵峙心绪都放松了。
-
-凭借着自己的能力，过滤了空气中的其他味道，嗅到了男人身上令他着迷的信息素。
-
-要说是甘菊味，但又不准确，更像是用甘菊的沐浴露洗了澡后，凑到衣服里去嗅那股味道，热烘烘的清淡味，只不过不知道为什么，最近一段时间这味道淡得不像话，快要闻不出了。
-
-他伸手拿过付柏启今天早上交上来的文件，“你的方案有几个地方写的不太清楚，拿回去再改改。”
-
-“是哪些地方出了问题？”
-
-距离近了之后，甘菊味的信息素更加浓郁了，除此之外，还掺杂着一种奇怪的充满攻击性的木质香，两种味道混杂在一起就有些变味。
-
-这并不奇怪，付柏启是一个优质的Alpha，这样的信息素才算正常。
-
-一般来说，Alpha的信息素不像Omega那么温和，大多都沉重具有攻击性。
-
-但闵峙很喜欢付柏启信息素的味道，不，应该说，是迷恋。
-
-几乎每一次不经意间嗅到这股味道时他都会浑身都放松下来，就连一个人待在家里的时候也总是想着。
-
-当然了，他也很喜欢付柏启，一个能力强，长相帅气也很识眼色的Alpha，一直都是他的理想伴侣。
-
-是的，Alpha伴侣。
-
-但闵峙却不是Omega，他是这个时代的超A性别者，他的两位父亲都是Alpha，因此他生来就和普通Alpha不太一样，有着比S级Alpha还要强的能力，和极具攻击性的信息素。
-
-他并不是第一例这样的人类，研究者将他们这种群体称为Enigma。
-
-他们凌驾于所有性别之上，他们具有侵略性的信息素甚至能将Alpha变成Omega，除了信息素之外，无论是智商还是体格都是比常人要优秀得多。
-
-几乎整个世界的上等阶级都有他们的身影。
-
-对于所有Enigma来说，Alpha伴侣是最好的选择，这倒是长久以来的传统了，Omega对于他们来说太过于弱小，容易伤害到他们，当然也有其他一部分原因，比如Alpha确实比Omega更能激起Enigma的欲望。
-
-所以大部分Enigma在选择伴侣时会优先选择体格较为强健的Alpha。
-
-不过仍有相当一部分Enigma会选择Omega，闵峙显然不是其中一员，他对Omega完全不感兴趣。
-
-而付柏启，S级的Alpha，却长了一张冷清又漂亮的脸，个性和他的脸一样，冷淡疏离，像高傲的天鹅，总是昂着头看人。', 0, '2025-10-25 15:58:31.956235+00', 'completed', NULL, 0, 'Untitled Chapter');
-
--- ----------------------------
--- Table structure for storyboards
--- ----------------------------
-DROP TABLE IF EXISTS "public"."storyboards";
-CREATE TABLE "public"."storyboards" (
-  "storyboard_id" uuid NOT NULL DEFAULT gen_random_uuid(),
-  "project_id" uuid NOT NULL,
-  "source_text_id" uuid NOT NULL,
-  "panel_index" int4 NOT NULL DEFAULT 0,
-  "original_text_snippet" text COLLATE "pg_catalog"."default",
-  "character_appearance" text COLLATE "pg_catalog"."default",
-  "scene_and_lighting" text COLLATE "pg_catalog"."default",
-  "camera_and_composition" text COLLATE "pg_catalog"."default",
-  "expression_and_action" text COLLATE "pg_catalog"."default",
-  "style_requirements" text COLLATE "pg_catalog"."default",
-  "generated_image_url" varchar(1024) COLLATE "pg_catalog"."default",
-  "created_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
-  "updated_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
-  "character_id" uuid
-)
-;
-COMMENT ON COLUMN "public"."storyboards"."storyboard_id" IS '唯一分镜ID (UUID)';
-COMMENT ON COLUMN "public"."storyboards"."project_id" IS '外键，关联到 projects(project_id)，用于快速索引项目下的所有分镜';
-COMMENT ON COLUMN "public"."storyboards"."source_text_id" IS '外键，关联到 source_texts(text_id)，标识该分镜属于哪一章小说';
-COMMENT ON COLUMN "public"."storyboards"."panel_index" IS '分镜在章节内的排序索引 (例如 0, 1, 2, ...)，用于排序';
-COMMENT ON COLUMN "public"."storyboards"."original_text_snippet" IS '该分镜对应的原始小说文本片段 (方便用户对照)';
-COMMENT ON COLUMN "public"."storyboards"."character_appearance" IS '【角色外貌】的详细描述 (例如：年龄, 性别, 身高, 体型, 发型, 发色, 眼睛, 穿着, 特殊配饰)';
-COMMENT ON COLUMN "public"."storyboards"."scene_and_lighting" IS '【场景与光照】的详细描述 (例如：地点, 时间, 天气, 光源, 氛围)';
-COMMENT ON COLUMN "public"."storyboards"."camera_and_composition" IS '【镜头与构图】的详细描述 (例如：镜头景别(特写/中景/全景), 角度(正面/四分之三/低角度/高角度), 聚焦于角色, 动态姿势)';
-COMMENT ON COLUMN "public"."storyboards"."expression_and_action" IS '【表情与动作】的详细描述 (例如：情绪, 面部表情, 手势, 动作)';
-COMMENT ON COLUMN "public"."storyboards"."style_requirements" IS '【风格要求】的详细描述 (例如：漫画, 黑白网点, 清晰线条, 分镜构图, 高清晰度, 详细背景, 角色设计一致性)';
-COMMENT ON COLUMN "public"."storyboards"."generated_image_url" IS 'AIGC生成的漫画图片存放地址 (URL或对象存储路径)';
-COMMENT ON COLUMN "public"."storyboards"."created_at" IS '分镜创建时间';
-COMMENT ON COLUMN "public"."storyboards"."updated_at" IS '分镜最后更新时间';
-COMMENT ON COLUMN "public"."storyboards"."character_id" IS '外键，关联到 characters(character_id)，标识该分镜的主要角色 (允许为空)';
-COMMENT ON TABLE "public"."storyboards" IS '分镜规划表 (存储每个单独的漫画分格)';
-
--- ----------------------------
--- Records of storyboards
--- ----------------------------
-INSERT INTO "public"."storyboards" VALUES ('e5a8a6f0-1b3a-4f5e-8d9c-0a2a3a4a5b61', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 'd1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2c', 0, '清晨，雾气尚未散去，少年李慕白背着行囊...', '年龄17岁, 男性, 身高178cm, 身材修长, 黑色长发束成马尾, 黑色眼眸犀利, 穿着朴素的蓝色武道袍, 背着一个竹制背包和一把剑', '山路, 清晨, 浓雾, 太阳刚升起(漫射光源), 安静且雾气缭绕的氛围', '中景镜头, 从背后呈四分之三角度, 聚焦于角色回望山顶', '怀旧, 依依不舍, 扭头回望, 静止站立', '漫画风格, 黑白网点, 清晰的线条, 详细的背景(山脉和雾气)', 'https://cdn.example.com/img/project_a_t1_p0.png', '2025-10-23 17:55:38.092062+00', '2025-10-24 02:19:27.170158+00', 'c0a1b2c3-1111-4f5e-8d9c-0a2a3a4a5b01');
-INSERT INTO "public"."storyboards" VALUES ('e5a8a6f0-1b3a-4f5e-8d9c-0a2a3a4a5b62', 'f47ac10b-58cc-4372-a567-0e02b2c3d479', 'd1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2c', 1, '...毅然转身下山。他不知道，此行将改变他的一生。', '年龄17岁, 男性, 身高178cm, 身材修长, 黑色长发束成马尾, 黑色眼眸犀利, 穿着朴素的蓝色武道袍, 背着一个竹制背包和一把剑', '山路, 清晨, 浓雾, 太阳刚升起(漫射光源), 安静且雾气缭绕的氛围', '全景镜头, 正面角度, 聚焦于角色向前走(朝向镜头), 动态姿势(行走中)', '坚定, 坚决, 表情严肃, 自信地大步向前', '漫画风格, 黑白网点, 清晰的线条, 强调动态的分镜构图', 'https://cdn.example.com/img/project_a_t1_p1.png', '2025-10-23 17:55:38.092062+00', '2025-10-24 02:19:27.452626+00', 'c0a1b2c3-1111-4f5e-8d9c-0a2a3a4a5b01');
-INSERT INTO "public"."storyboards" VALUES ('e5a8a6f0-1b3a-4f5e-8d9c-0a2a3a4a5b63', 'f47ac10b-58cc-4372-a567-0e02b2c3d480', 'd1b6e6e8-0b6f-4a81-8b43-6a107b7b1e2d', 0, '王珂缩在角落，借着闪电的光芒，她看到那个黑影又一次出现在了巷口。', '年龄22岁, 女性, 身高165cm, 中等身材, 凌乱的黑色短发, 惊恐的大眼睛, 穿着宽大的T恤和短裤, 没有配饰', '黑暗的公寓房间内, 夜晚, 雷雨, 主要光源是窗外短暂刺眼的闪电, 高对比度, 紧张的氛围', '特写镜头, 低角度(仰视角色), 聚焦于角色的脸部', '恐惧, 惊恐万分, 睁大眼睛, 用手捂住嘴巴, 蜷缩在角落', '条漫风格, 全彩, 高清晰度, 戏剧性的光照, 专注于情绪表达', 'https://cdn.example.com/img/project_b_t1_p0.png', '2025-10-23 17:55:38.092062+00', '2025-10-24 02:19:27.720621+00', 'c0a1b2c3-2222-4f5e-8d9c-0a2a3a4a5b02');
-INSERT INTO "public"."storyboards" VALUES ('9cd908ec-5457-4ec1-aef2-a39fbcfe6af3', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '2235f7ae-93df-42fa-9450-0a08d4b97172', 0, '闵峙把手中厚厚的文件扔到一旁，捏着鼻梁站了起来。昨天暴雨下了一夜，到现在都还没停，雨点子直直地落到下去，窗上像是泼了水一样淅淅沥沥地淌着。透过模糊的玻璃，他看到公司门口的花坛边上站着个打着灰蓝色雨伞的男人。', '西装领口微微皱起，袖口因雨水略显湿润，眉头紧锁，手指轻捏鼻梁，眼神透过雾蒙的玻璃凝视外面。', '雨夜的办公室，窗玻璃上布满水痕，室内灯光昏暗且带有冷白色的氛围光，雨滴的光斑在玻璃上投射出斑驳的光影。', '中景推拉镜头先捕捉闵峙抛文件的动作，随后切换到浅景深的特写，焦点从闵峙的手移至窗外的雨伞男人，构图采用对角线引导视线。', '闵峙愤怒地将文件甩到一旁，随后站起身来，捏鼻子深呼吸，眼神从愤怒转为警觉。', '写实的赛博朋克风格，色调偏冷，雨水质感细腻，光影对比强烈，营造压抑而紧张的氛围。', NULL, '2025-10-25 15:58:54.802504+00', '2025-10-25 15:58:54.802504+00', '508b462f-dff8-4499-8d94-2b00dea1dc76');
-INSERT INTO "public"."storyboards" VALUES ('5d5cdf8e-a38e-415d-babe-c57d563804fa', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '2235f7ae-93df-42fa-9450-0a08d4b97172', 1, '一个身形修长的男人从外面走进办公室，“闵总，您找我？”', '身形修长，灰蓝色雨伞已收起，西装剪裁合体，头发微湿贴在额头，冷峻的眼神直视闵峙，嘴角轻抿。', '办公室门口，雨水顺着门框滴落，屋内柔和的顶灯与窗外的雨光形成对比，地面有轻微的水光反射。', '跟随式推镜头从门口进入，随后切换为低角度的半身镜头捕捉付柏启的全身，构图采用三分法将人物置于画面左侧，背景的雨幕形成层次。', '付柏启步伐稳健，轻轻收起雨伞，抬头以平静却带有轻微挑衅的语气问候。', '高对比度的商业写实风，色调以冷灰蓝为主，雨滴细节清晰，人物轮廓锐利，突出角色的冷峻气质。', NULL, '2025-10-25 15:58:55.110384+00', '2025-10-25 15:58:55.110384+00', '659d5eb7-0a66-4eb8-90e7-35f5d8ad8ac5');
-INSERT INTO "public"."storyboards" VALUES ('36fa8209-60d0-499f-acb6-b1c50625aec9', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '2235f7ae-93df-42fa-9450-0a08d4b97172', 2, '凭借着自己的能力，过滤了空气中的其他味道，嗅到了男人身上令他着迷的信息素。要说是甘菊味，但又不准确，更像是用甘菊的沐浴露洗了澡后，凑到衣服里去嗅那股味道，热烘烘的清淡味，只不过不知道为什么，最近一段时间这味道淡得不像话，快要闻不出了。', '闭眼轻吸，眉头舒展，面部表情放松，手指轻抚文件边缘，嘴角微微上扬，显露出沉醉的神情。', '办公室内部灯光柔和，背光形成淡淡的光晕，雨声作为背景音效，空气中似有轻微的雾气渲染出嗅觉的抽象感。', '极近景特写闵峙的鼻尖和眼睛，镜头缓慢推入，背景虚化，仅保留雨滴的光斑，构图聚焦于面部细节。', '闵峙深吸一口气，眼中闪过回忆的光芒，轻轻点头表示满意。', '感官化的艺术风格，使用柔焦和光晕效果突出嗅觉的抽象表现，色调温暖与冷色雨景形成对比。', NULL, '2025-10-25 15:58:55.409682+00', '2025-10-25 15:58:55.409682+00', '508b462f-dff8-4499-8d94-2b00dea1dc76');
-INSERT INTO "public"."storyboards" VALUES ('75361a08-6713-46d8-bba9-80eb4a186dbd', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '2235f7ae-93df-42fa-9450-0a08d4b97172', 3, '他伸手拿过付柏启今天早上交上来的文件，“你的方案有几个地方写的不太清楚，拿回去再改改。”', '手指轻触文件，西装袖口微微抖动，表情严肃但带有淡淡的笑意，眼神专注。', '办公桌前的台灯投射出温暖的光柱，雨声仍在远处回响，桌面上散落几页纸张。', '两人中景，采用斜45度的侧光，构图采用对称式，闵峙位于画面左侧，付柏启位于右侧，焦点在两人手中交接的文件上。', '闵峙递文件时轻声指点，付柏启略微点头，保持冷峻的姿态。', '写实商务风格，光影柔和，色调以中性灰为主，突出人物之间的微妙张力。', NULL, '2025-10-25 15:58:55.839561+00', '2025-10-25 15:58:55.839561+00', '508b462f-dff8-4499-8d94-2b00dea1dc76');
-INSERT INTO "public"."storyboards" VALUES ('655693b0-7866-4a7f-b5a0-faa67819676b', '07235a52-140e-4ea2-b9ad-b7fb173a59a1', '2235f7ae-93df-42fa-9450-0a08d4b97172', 4, '付柏启，S级的Alpha，却长了一张冷清又漂亮的脸，个性和他的脸一样，冷淡疏离，像高傲的天鹅，总是昂着头看人。', '冷清漂亮的脸庞，眉宇如雕，眼神锐利而疏离，嘴角微抿，头略微抬起，仿佛在审视整个空间。', '办公室灯光聚焦在付柏启的面部，背后形成柔和的轮廓光，雨滴的光斑在窗帘上投射出星点般的光点。', '特写肖像，采用低角度拍摄以强化其高傲气质，构图采用中心对称，背景轻度虚化。', '付柏启保持冷淡的表情，眼神略带挑衅，轻轻抬头凝视前方。', '高对比的电影质感，色调偏冷蓝，光影锐利，突出角色的高贵与疏离感。', NULL, '2025-10-25 15:58:56.091535+00', '2025-10-25 15:58:56.091535+00', '659d5eb7-0a66-4eb8-90e7-35f5d8ad8ac5');
-
--- ----------------------------
--- Table structure for users
--- ----------------------------
-DROP TABLE IF EXISTS "public"."users";
-CREATE TABLE "public"."users" (
-  "user_id" uuid NOT NULL DEFAULT gen_random_uuid(),
-  "username" varchar(100) COLLATE "pg_catalog"."default" NOT NULL,
-  "email" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "hashed_password" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
-  "credit_balance" int4 DEFAULT 0,
-  "created_at" timestamptz(6) DEFAULT timezone('utc'::text, now()),
-  "updated_at" timestamptz(6) DEFAULT timezone('utc'::text, now())
-)
-;
-COMMENT ON COLUMN "public"."users"."user_id" IS '唯一用户ID (UUID)';
-COMMENT ON COLUMN "public"."users"."username" IS '用户名 (用于登录，必须唯一)';
-COMMENT ON COLUMN "public"."users"."email" IS '电子邮箱 (用于登录或找回密码，必须唯一)';
-COMMENT ON COLUMN "public"."users"."hashed_password" IS '加密后的密码 (例如使用bcrypt或Argon2)';
-COMMENT ON COLUMN "public"."users"."credit_balance" IS '可使用额度 (例如: 剩余可生成图片张数或Token数)';
-COMMENT ON COLUMN "public"."users"."created_at" IS '账户创建时间';
-COMMENT ON COLUMN "public"."users"."updated_at" IS '账户信息最后更新时间';
-COMMENT ON TABLE "public"."users" IS '用户信息表';
-
--- ----------------------------
--- Records of users
--- ----------------------------
-INSERT INTO "public"."users" VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'user_A', 'user_a@example.com', '$2b$12$dummyhashplaceholder1', 100, '2025-10-23 17:55:37.406081+00', '2025-10-23 17:55:37.406081+00');
-INSERT INTO "public"."users" VALUES ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'user_B', 'user_b@example.com', '$2b$12$dummyhashplaceholder2', 50, '2025-10-23 17:55:37.406081+00', '2025-10-23 17:55:37.406081+00');
-INSERT INTO "public"."users" VALUES ('19602e5a-7e68-4e91-8b67-ee27d2f29bd5', 'test_user_1864', 'test_user_1864@example.com', 'test_password_hash', 0, '2025-10-24 01:37:30.692544+00', '2025-10-24 01:37:30.692544+00');
-INSERT INTO "public"."users" VALUES ('5cfa3d74-920b-4f57-9ad2-f02838b56c22', 'test_user_create', 'test_create@example.com', '$2b$12$Tew/dJ9.gg7waD9Bv.XV8us1PvcDl3jbym96kBJzw.kFUqUXnFhWe', 0, '2025-10-24 01:39:16.413759+00', '2025-10-24 01:39:16.413759+00');
-INSERT INTO "public"."users" VALUES ('20bf06fe-5cbd-4c14-94ea-6f54ca95bb70', 'test_user_22904', 'test_user_22904@example.com', '$2b$12$ciGPhTm/e2QpsQhAlLYxVekcM4FcYQmF13S//6qgzQGQtN/LQ7Or6', 0, '2025-10-24 07:28:10.851147+00', '2025-10-24 07:28:10.851147+00');
-INSERT INTO "public"."users" VALUES ('3f8f4023-9d72-4b69-a481-e5db08d91a58', 'test_user_666341', 'test_user_666341@example.com', 'test_password_hash', 0, '2025-10-25 07:04:06.872929+00', '2025-10-25 07:04:06.872929+00');
-INSERT INTO "public"."users" VALUES ('e8195641-df6b-477a-af43-d7be5981436f', '123', '123@123.com', '$2b$12$.yGbA59y5Ijn05ptFxK0ouW4i41DLR.2O1bw/t85NPdJdyT9VKFEK', 0, '2025-10-25 13:56:14.043823+00', '2025-10-25 13:56:14.043823+00');
-
--- ----------------------------
--- Primary Key structure for table characters
--- ----------------------------
-ALTER TABLE "public"."characters" ADD CONSTRAINT "characters_pkey" PRIMARY KEY ("character_id");
-
--- ----------------------------
--- Triggers structure for table projects
--- ----------------------------
-CREATE TRIGGER "set_projects_updated_at" BEFORE UPDATE ON "public"."projects"
-FOR EACH ROW
-EXECUTE PROCEDURE "public"."trigger_set_timestamp"();
-
--- ----------------------------
--- Primary Key structure for table projects
--- ----------------------------
-ALTER TABLE "public"."projects" ADD CONSTRAINT "projects_pkey" PRIMARY KEY ("project_id");
-
--- ----------------------------
--- Indexes structure for table source_texts
--- ----------------------------
-CREATE INDEX "idx_source_texts_chapter_number" ON "public"."source_texts" USING btree (
-  "project_id" "pg_catalog"."uuid_ops" ASC NULLS LAST,
-  "chapter_number" "pg_catalog"."int4_ops" ASC NULLS LAST
-);
-
--- ----------------------------
--- Primary Key structure for table source_texts
--- ----------------------------
-ALTER TABLE "public"."source_texts" ADD CONSTRAINT "source_texts_pkey" PRIMARY KEY ("text_id");
-
--- ----------------------------
--- Triggers structure for table storyboards
--- ----------------------------
-CREATE TRIGGER "set_storyboards_updated_at" BEFORE UPDATE ON "public"."storyboards"
-FOR EACH ROW
-EXECUTE PROCEDURE "public"."trigger_set_timestamp"();
-
--- ----------------------------
--- Primary Key structure for table storyboards
--- ----------------------------
-ALTER TABLE "public"."storyboards" ADD CONSTRAINT "storyboards_pkey" PRIMARY KEY ("storyboard_id");
-
--- ----------------------------
--- Triggers structure for table users
--- ----------------------------
-CREATE TRIGGER "set_users_updated_at" BEFORE UPDATE ON "public"."users"
-FOR EACH ROW
-EXECUTE PROCEDURE "public"."trigger_set_timestamp"();
-
--- ----------------------------
--- Uniques structure for table users
--- ----------------------------
-ALTER TABLE "public"."users" ADD CONSTRAINT "users_username_key" UNIQUE ("username");
-ALTER TABLE "public"."users" ADD CONSTRAINT "users_email_key" UNIQUE ("email");
-
--- ----------------------------
--- Primary Key structure for table users
--- ----------------------------
-ALTER TABLE "public"."users" ADD CONSTRAINT "users_pkey" PRIMARY KEY ("user_id");
-
--- ----------------------------
--- Foreign Keys structure for table characters
--- ----------------------------
-ALTER TABLE "public"."characters" ADD CONSTRAINT "characters_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."projects" ("project_id") ON DELETE CASCADE ON UPDATE NO ACTION;
-
--- ----------------------------
--- Foreign Keys structure for table projects
--- ----------------------------
-ALTER TABLE "public"."projects" ADD CONSTRAINT "projects_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users" ("user_id") ON DELETE CASCADE ON UPDATE NO ACTION;
-
--- ----------------------------
--- Foreign Keys structure for table source_texts
--- ----------------------------
-ALTER TABLE "public"."source_texts" ADD CONSTRAINT "source_texts_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."projects" ("project_id") ON DELETE CASCADE ON UPDATE NO ACTION;
-
--- ----------------------------
--- Foreign Keys structure for table storyboards
--- ----------------------------
-ALTER TABLE "public"."storyboards" ADD CONSTRAINT "storyboards_character_id_fkey" FOREIGN KEY ("character_id") REFERENCES "public"."characters" ("character_id") ON DELETE SET NULL ON UPDATE NO ACTION;
-ALTER TABLE "public"."storyboards" ADD CONSTRAINT "storyboards_project_id_fkey" FOREIGN KEY ("project_id") REFERENCES "public"."projects" ("project_id") ON DELETE CASCADE ON UPDATE NO ACTION;
-ALTER TABLE "public"."storyboards" ADD CONSTRAINT "storyboards_source_text_id_fkey" FOREIGN KEY ("source_text_id") REFERENCES "public"."source_texts" ("text_id") ON DELETE CASCADE ON UPDATE NO ACTION;
 
 
 
@@ -1271,4 +933,89 @@ export default {
 
 
 
+你只需要告诉你的 FastAPI 后端：“请把这个本地文件夹里的内容，通过 HTTP URL 暴露出去，让浏览器可以访问。”
 
+这个过程在 FastAPI 中非常简单，叫做 "挂载静态文件" (Mounting Static Files)。
+
+假设你的后端项目结构是：
+
+/my_backend_project/
+├── main.py        <-- 你的 FastAPI 主程序
+└── generated_images/  <-- 你保存图片的地方
+    ├── comic1.png
+    └── comic2.png
+你需要做三件事：
+
+1. (后端) 在 FastAPI 中挂载 generated_images 文件夹
+打开你的 main.py 文件，添加两行代码：
+
+Python
+
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles  # 1. 导入这个
+import uvicorn
+
+app = FastAPI()
+
+# ... 你的其他 API 路由（比如 @app.post(...)）...
+
+
+# 2. 挂载静态文件夹
+# 这行代码告诉 FastAPI：
+# 任何以 "/static-images" 开头的 URL 请求...
+# ...都请去 "generated_images" 这个本地文件夹里找对应的文件
+app.mount(
+    "/static-images",  # <-- 这是 URL 路径
+    StaticFiles(directory="generated_images"), # <-- 这是本地文件夹名
+    name="static-images"
+)
+
+
+# ... 你的 uvicorn.run ...
+2. (后端) 修改你的生成接口，返回 URL 而不是 Base64
+在你那个 executeGenerate 调用的接口（/generate-from-db/...）里，当你成功生成图片并保存到本地（比如 generated_images/my_comic.png）后，你不能再返回 Base64 了。
+
+你必须返回你刚刚创建的HTTP URL：
+
+Python
+
+@app.post("/api/v1/storyboard-gen/generate-from-db/{storyboard_id}")
+async def generate_comic_from_db(storyboard_id: str, size: str):
+    # ... 你的图片生成逻辑 ...
+    
+    # 假设你生成的文件名叫 'new_comic_abc.png'
+    file_name = "new_comic_abc.png"
+    
+    # 把它保存在你挂载的那个文件夹里
+    await save_image_to_disk(f"generated_images/{file_name}") 
+    
+    # 重点：构建并返回 URL
+    image_url = f"http://localhost:8000/static-images/{file_name}"
+    
+    return {
+        "ok": True,
+        "image": {
+            "url": image_url,  # <--- 关键在这里！
+            "size": size
+        },
+        "has_dialogue": True,
+        # ...
+    }
+3. (前端) 检查你的 uni-app 代码
+好消息是：你的前端 Vue 代码一行都不用改！
+
+你的 <image :src="result.image.url" ...> 之前接收到的是一个（过大的）data:image/png;base64,... 字符串。
+
+现在，它会接收到一个标准、干净的 URL： http://localhost:8000/static-images/new_comic_abc.png
+
+浏览器会像加载任何网站的图片一样去加载这个 URL，uni-app 的 <image> 组件会完美地显示它。
+
+总结：
+
+在 FastAPI 中用 app.mount 把你的 generated_images 文件夹挂载到 /static-images URL 路径上。
+
+修改你的后端接口，让它在保存文件后，返回这个文件对应的 http://... URL。
+
+重启你的 FastAPI 服务器。
+
+你的前端页面就能正常显示图片了。

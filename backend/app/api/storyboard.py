@@ -16,7 +16,7 @@
 
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from pydantic import BaseModel
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 import os
 import sys
 
@@ -117,9 +117,7 @@ async def process_text_background(
         if all_storyboards_from_ai:
             print(f"   (BG) 保存分镜面板...")
             for i, panel_data in enumerate(all_storyboards_from_ai):
-                char_name = panel_data.get("character_name")
-                char_id = name_to_id_map.get(char_name)
-                await create_storyboard_panel(project_id, text_id, i, panel_data, char_id)
+                await create_storyboard_panel(project_id, text_id, i, panel_data, name_to_id_map)
         # --- AI 处理逻辑结束 ---
 
         # 标记状态为 completed
@@ -248,6 +246,73 @@ async def get_storyboards(text_id: str = Query(...)):
         raise HTTPException(status_code=500, detail=f"获取分镜失败: {str(e)}")
 
 
+class StoryboardPanelCreate(BaseModel):
+    """分镜面板创建请求模型"""
+    project_id: str
+    source_text_id: str
+    panel_index: int
+    original_text_snippet: Optional[str] = None
+    character_appearance: Optional[str] = None
+    scene_and_lighting: Optional[str] = None
+    camera_and_composition: Optional[str] = None
+    expression_and_action: Optional[str] = None
+    style_requirements: Optional[str] = None
+    panel_elements: Optional[List[Dict[str, Any]]] = None
+
+
+@router.post("/api/v1/storyboard", tags=["Storyboard"])
+async def create_storyboard(panel_data: StoryboardPanelCreate):
+    """
+    创建新的分镜面板
+    
+    功能说明：
+    - 允许用户手动创建新的分镜面板
+    - 支持所有分镜字段的输入
+    - 自动分配panel_index
+    
+    参数：
+        panel_data: 分镜面板数据
+    
+    返回：
+        dict: 创建结果状态
+    """
+    print(f"➕(API) 创建分镜面板: project_id={panel_data.project_id}")
+    
+    if not db_client.is_connected:
+        raise HTTPException(status_code=500, detail="数据库未连接")
+    
+    try:
+        from app.db import create_storyboard_panel
+        
+        # 创建分镜面板数据
+        panel_dict = panel_data.dict(exclude_unset=True)
+        
+        # 调用数据库创建函数
+        new_panel = await create_storyboard_panel(
+            project_id=panel_data.project_id,
+            source_text_id=panel_data.source_text_id,
+            panel_index=panel_data.panel_index,
+            panel_data=panel_dict,
+            name_to_id_map=None  # 手动创建时不需要角色名称映射
+        )
+        
+        if new_panel:
+            print(f"✅ 分镜面板创建成功: {new_panel.storyboard_id}")
+            return {
+                "ok": True, 
+                "message": "创建成功",
+                "storyboard_id": new_panel.storyboard_id,
+                "panel": new_panel.to_dict()
+            }
+        else:
+            print(f"❌ 分镜面板创建失败")
+            raise HTTPException(status_code=500, detail="创建失败")
+            
+    except Exception as e:
+        print(f"❌(API) 创建分镜面板失败: {e}")
+        raise HTTPException(status_code=500, detail=f"创建失败: {str(e)}")
+
+
 class StoryboardPanelUpdate(BaseModel):
     """分镜面板更新请求模型"""
     original_text_snippet: Optional[str] = None
@@ -257,6 +322,9 @@ class StoryboardPanelUpdate(BaseModel):
     expression_and_action: Optional[str] = None
     style_requirements: Optional[str] = None
     character_id: Optional[str] = None
+    dialogue: Optional[str] = None
+    panel_elements: Optional[List[Dict[str, Any]]] = None
+    panel_index: Optional[int] = None
 
 
 @router.put("/api/v1/storyboard/{storyboard_id}", tags=["Storyboard"])

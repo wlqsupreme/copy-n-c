@@ -19,6 +19,7 @@ import sys
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 # 添加 backend 目录到 Python 路径，确保能导入config
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -28,7 +29,7 @@ from config import config
 from app.db import init_database, close_database, db_client
 
 # 导入API路由模块
-from app.api import storyboard, project, auth
+from app.api import storyboard, project, auth, text_to_image, storyboard_image_gen
 
 # 检查配置是否有效
 if not config.is_valid():
@@ -58,11 +59,20 @@ app.include_router(auth.router)
 app.include_router(storyboard.router)
 # 项目管理相关的API路由
 app.include_router(project.router)
+# 文生图相关的API路由
+app.include_router(text_to_image.router)
+# 分镜图片生成相关的API路由
+app.include_router(storyboard_image_gen.router)
 
-# 预留协作者扩展空间
-# 如果协作者添加了图像生成功能，可以在这里导入和挂载
-# from app.api import image_gen
-# app.include_router(image_gen.router)
+# 配置静态文件服务，用于提供生成的图片
+# __file__ 是 backend/app/main.py
+# dirname(dirname(__file__)) = backend目录
+backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+static_dir = os.path.join(backend_root, "layout")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir)
+app.mount("/layout", StaticFiles(directory=static_dir), name="layout")
+print(f"📁 静态文件目录: {static_dir}")
 
 
 # ==================== 应用生命周期管理 ====================

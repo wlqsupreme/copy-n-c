@@ -30,13 +30,20 @@
       
       <!-- 分镜面板列表 -->
       <view class="panels-section">
-        <text class="section-title">分镜面板 ({{ panels.length }}个)</text>
+        <view class="section-header">
+          <text class="section-title">分镜面板 ({{ panels.length }}个)</text>
+          <view class="section-actions">
+            <button class="sort-panels-btn" @click="openSortModal" :disabled="panels.length <= 1">排序</button>
+            <button class="add-panel-btn" @click="openAddPanelModal">+ 添加分镜</button>
+          </view>
+        </view>
         
         <view class="panel-item" v-for="(panel, panelIndex) in panels" :key="panel.storyboard_id">
           <view class="panel-header">
             <text class="panel-title">面板 {{ panel.panel_index + 1 }}</text>
             <view class="panel-actions">
               <button class="action-btn" @click="editPanel(panelIndex)">编辑</button>
+              <button class="action-btn generate" @click="generateComic(panelIndex)">生成漫画</button>
               <button class="action-btn delete" @click="deletePanel(panelIndex)">删除</button>
             </view>
           </view>
@@ -50,7 +57,24 @@
             <view class="panel-field">
               <text class="field-label">角色外貌（分镜特定）：</text>
               <text class="field-value">{{ panel.character_appearance }}</text>
-              <text class="field-hint" v-if="panel.character_id">✓ 此角色已设定：{{ getCharacterName(panel.character_id) }}</text>
+            </view>
+            
+            <!-- 多人对话显示 -->
+            <view class="panel-field" v-if="panel.panel_elements && panel.panel_elements.length > 0">
+              <text class="field-label">对话内容：</text>
+              <view class="dialogue-list">
+                <view class="dialogue-item" v-for="(element, elementIndex) in panel.panel_elements" :key="elementIndex">
+                  <text class="character-name">{{ getCharacterNameById(element.character_id) }}：</text>
+                  <text class="dialogue-text">{{ element.dialogue }}</text>
+                </view>
+              </view>
+            </view>
+            
+            <!-- 兼容旧数据：单个角色对话 -->
+            <view class="panel-field" v-else-if="panel.character_id">
+              <text class="field-label">对话内容：</text>
+              <text class="field-value">{{ panel.dialogue || '无对话' }}</text>
+              <text class="field-hint">✓ 此角色已设定：{{ getCharacterName(panel.character_id) }}</text>
             </view>
             
             <view class="panel-field">
@@ -115,84 +139,36 @@
       </view>
     </view>
     
-    <!-- 编辑面板弹窗 -->
-    <view class="modal-overlay" v-if="showEditModal" @click="closeModal">
-      <view class="modal-content" @click.stop>
-        <view class="modal-header">
-          <text class="modal-title">编辑分镜面板</text>
-          <button class="close-btn" @click="closeModal">×</button>
-        </view>
-        
-        <view class="modal-body">
-          <view class="form-group">
-            <text class="form-label">原文片段：</text>
-            <textarea 
-              class="form-textarea" 
-              v-model="editingPanel.original_text_snippet"
-              placeholder="输入原文片段..."
-            ></textarea>
-          </view>
-          
-          <view class="form-group">
-            <text class="form-label">角色外貌（分镜特定）：</text>
-            <text class="form-hint">描述该分镜中角色的特定外貌变化（如：衣服破损、受伤状态等）</text>
-            <textarea 
-              class="form-textarea" 
-              v-model="editingPanel.character_appearance"
-              placeholder="描述角色在该分镜中的特定外貌..."
-            ></textarea>
-          </view>
-          
-          <view class="form-group">
-            <text class="form-label">场景光照：</text>
-            <textarea 
-              class="form-textarea" 
-              v-model="editingPanel.scene_and_lighting"
-              placeholder="描述场景和光照..."
-            ></textarea>
-          </view>
-          
-          <view class="form-group">
-            <text class="form-label">镜头构图：</text>
-            <textarea 
-              class="form-textarea" 
-              v-model="editingPanel.camera_and_composition"
-              placeholder="描述镜头和构图..."
-            ></textarea>
-          </view>
-          
-          <view class="form-group">
-            <text class="form-label">表情动作：</text>
-            <textarea 
-              class="form-textarea" 
-              v-model="editingPanel.expression_and_action"
-              placeholder="描述表情和动作..."
-            ></textarea>
-          </view>
-          
-          <view class="form-group">
-            <text class="form-label">风格要求：</text>
-            <textarea 
-              class="form-textarea" 
-              v-model="editingPanel.style_requirements"
-              placeholder="描述风格要求..."
-            ></textarea>
-          </view>
-        </view>
-        
-        <view class="modal-footer">
-          <button class="cancel-btn" @click="closeModal">取消</button>
-          <button class="save-btn" @click="savePanel" :disabled="isLoading">
-            {{ isLoading ? '保存中...' : '保存' }}
-          </button>
-        </view>
-      </view>
-    </view>
+    <!-- 分镜排序组件 -->
+    <PanelSorter
+      :visible="showSortModal"
+      :panels="panels"
+      :is-loading="isLoading"
+      @save="handleSortSave"
+      @close="closeSortModal"
+    />
+    
+    <!-- 分镜编辑组件 -->
+    <StoryboardEditor
+      :visible="showEditModal || showAddModal"
+      :characters="characters"
+      :editing-data="editingPanel"
+      :is-loading="isLoading"
+      @save="handlePanelSave"
+      @close="closeModal"
+    />
   </view>
 </template>
 
 <script>
+import StoryboardEditor from '@/components/StoryboardEditor.vue'
+import PanelSorter from '@/components/PanelSorter.vue'
+
 export default {
+  components: {
+    StoryboardEditor,
+    PanelSorter
+  },
   data() {
     return {
       projectId: null,
@@ -202,6 +178,8 @@ export default {
       chapterInfo: null,
       isLoading: false,
       showEditModal: false,
+      showAddModal: false,
+      showSortModal: false,
       showEditChapterModal: false,
       editingPanel: {},
       editingChapter: {},
@@ -284,45 +262,132 @@ export default {
       this.showEditModal = true;
     },
     
-    async savePanel() {
-      if (!this.editingPanel.original_text_snippet?.trim()) {
-        uni.showToast({ title: '原文片段不能为空', icon: 'none' });
-        return;
-      }
-      
+    openAddPanelModal() {
+      this.editingPanel = {};
+      this.editingPanelIndex = -1;
+      this.showAddModal = true;
+    },
+    
+    openSortModal() {
+      this.showSortModal = true;
+    },
+    
+    closeSortModal() {
+      this.showSortModal = false;
+    },
+    
+    async handleSortSave(sortedPanels) {
       this.isLoading = true;
       
       try {
-        const panelToSave = this.editingPanel;
-        const panelId = panelToSave.storyboard_id;
+        // 更新每个面板的 panel_index
+        const updates = sortedPanels.map((panel, index) => ({
+          storyboard_id: panel.storyboard_id,
+          panel_index: index
+        }));
         
-        const updates = {
-          original_text_snippet: panelToSave.original_text_snippet,
-          character_appearance: panelToSave.character_appearance,
-          scene_and_lighting: panelToSave.scene_and_lighting,
-          camera_and_composition: panelToSave.camera_and_composition,
-          expression_and_action: panelToSave.expression_and_action,
-          style_requirements: panelToSave.style_requirements
-        };
-        
-        const response = await uni.request({
-          url: `http://localhost:8000/api/v1/storyboard/${panelId}`,
-          method: 'PUT',
-          data: updates
-        });
-        
-        if (response.statusCode === 200 && response.data.ok) {
-          // 更新本地数据
-          this.panels[this.editingPanelIndex] = { ...panelToSave };
-          uni.showToast({ title: '保存成功', icon: 'success' });
-          this.closeModal();
-        } else {
-          throw new Error('保存失败');
+        // 批量更新面板索引
+        for (const update of updates) {
+          await uni.request({
+            url: `http://localhost:8000/api/v1/storyboard/${update.storyboard_id}`,
+            method: 'PUT',
+            data: { panel_index: update.panel_index }
+          });
         }
+        
+        // 更新本地数据
+        this.panels = sortedPanels.map((panel, index) => ({
+          ...panel,
+          panel_index: index
+        }));
+        
+        uni.showToast({ title: '排序保存成功', icon: 'success' });
+        this.closeSortModal();
       } catch (e) {
-        uni.showToast({ title: e.message || '保存失败', icon: 'none' });
+        uni.showToast({ title: e.message || '保存排序失败', icon: 'none' });
       } finally {
         this.isLoading = false;
+      }
+    },
+    
+    async handlePanelSave(data) {
+      this.isLoading = true;
+      
+      try {
+        if (data.isEdit) {
+          // 编辑模式
+          await this.updatePanel(data);
+        } else {
+          // 新建模式
+          await this.createPanel(data);
+        }
+      } catch (e) {
+        uni.showToast({ title: e.message || '操作失败', icon: 'none' });
+      } finally {
+        this.isLoading = false;
+      }
+    },
+    
+    async updatePanel(data) {
+      const panelId = data.storyboard_id;
+      
+      const updates = {
+        original_text_snippet: data.original_text_snippet,
+        character_appearance: data.character_appearance,
+        scene_and_lighting: data.scene_and_lighting,
+        camera_and_composition: data.camera_and_composition,
+        expression_and_action: data.expression_and_action,
+        style_requirements: data.style_requirements,
+        panel_elements: data.panel_elements
+      };
+      
+      const response = await uni.request({
+        url: `http://localhost:8000/api/v1/storyboard/${panelId}`,
+        method: 'PUT',
+        data: updates
+      });
+      
+      if (response.statusCode === 200 && response.data.ok) {
+        // 更新本地数据
+        this.panels[this.editingPanelIndex] = { ...this.panels[this.editingPanelIndex], ...updates };
+        uni.showToast({ title: '更新成功', icon: 'success' });
+        this.closeModal();
+      } else {
+        throw new Error('更新失败');
+      }
+    },
+    
+    async createPanel(data) {
+      const newPanelData = {
+        project_id: this.projectId,
+        source_text_id: this.textId,
+        panel_index: this.panels.length, // 新分镜的索引
+        ...data
+      };
+      
+      const response = await uni.request({
+        url: `http://localhost:8000/api/v1/storyboard`,
+        method: 'POST',
+        data: newPanelData
+      });
+      
+      if (response.statusCode === 200 && response.data.ok) {
+        // 添加新分镜到本地数据
+        const newPanel = {
+          storyboard_id: response.data.storyboard_id,
+          project_id: this.projectId,
+          source_text_id: this.textId,
+          panel_index: this.panels.length,
+          ...data,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        
+        this.panels.push(newPanel);
+        uni.showToast({ title: '创建成功', icon: 'success' });
+        this.closeModal();
+      } else {
+        throw new Error('创建失败');
       }
     },
     
@@ -362,6 +427,7 @@ export default {
     
     closeModal() {
       this.showEditModal = false;
+      this.showAddModal = false;
       this.editingPanel = {};
       this.editingPanelIndex = -1;
     },
@@ -410,6 +476,18 @@ export default {
     getCharacterName(characterId) {
       const character = this.characters.find(c => c.character_id === characterId);
       return character ? character.name : '未知角色';
+    },
+    
+    getCharacterNameById(characterId) {
+      const character = this.characters.find(c => c.character_id === characterId);
+      return character ? character.name : '未知角色';
+    },
+    
+    generateComic(panelIndex) {
+      const panel = this.panels[panelIndex];
+      uni.navigateTo({
+        url: `/pages/image/comic-generator?storyboard_id=${panel.storyboard_id}&project_id=${this.projectId}&text_id=${this.textId}`
+      });
     }
   }
 }
@@ -470,11 +548,48 @@ export default {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
 .section-title {
   font-size: 18px;
   font-weight: bold;
   color: #333;
-  margin-bottom: 15px;
+}
+
+.section-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.sort-panels-btn {
+  padding: 8px 16px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.sort-panels-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.add-panel-btn {
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
 }
 
 .panel-item {
@@ -513,6 +628,10 @@ export default {
   font-size: 12px;
 }
 
+.action-btn.generate {
+  background: #28a745;
+}
+
 .action-btn.delete {
   background: #dc3545;
 }
@@ -537,7 +656,7 @@ export default {
   line-height: 1.4;
 }
 
-/* 弹窗样式 */
+/* 编辑章节弹窗样式 */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -597,14 +716,12 @@ export default {
   margin-bottom: 5px;
 }
 
-.form-textarea {
+.form-input {
   width: 100%;
-  min-height: 80px;
   padding: 8px 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 14px;
-  resize: vertical;
 }
 
 .modal-footer {
@@ -636,28 +753,6 @@ export default {
 .save-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
-}
-
-.field-hint {
-  font-size: 12px;
-  color: #28a745;
-  margin-top: 4px;
-  display: block;
-}
-
-.form-hint {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 5px;
-  display: block;
-}
-
-.form-input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
 }
 
 /* 角色基础设定样式 */
@@ -726,5 +821,36 @@ export default {
 .empty-text {
   font-size: 14px;
   color: #999;
+}
+
+/* 对话显示样式 */
+.dialogue-list {
+  margin-top: 8px;
+}
+
+.dialogue-item {
+  margin-bottom: 8px;
+  padding: 8px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+  border-left: 3px solid #007bff;
+}
+
+.character-name {
+  font-weight: bold;
+  color: #007bff;
+  margin-right: 8px;
+}
+
+.dialogue-text {
+  color: #333;
+  line-height: 1.4;
+}
+
+.field-hint {
+  font-size: 12px;
+  color: #28a745;
+  margin-top: 4px;
+  display: block;
 }
 </style>
