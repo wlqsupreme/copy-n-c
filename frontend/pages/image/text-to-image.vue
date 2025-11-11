@@ -381,14 +381,11 @@
 </template>
 
 <script>
-import config from '../../config/index.js'
-
 export default {
   data() {
     return {
       currentTab: 'single',
       isLoading: false,
-      apiBaseURL: config.apiBaseURL || 'http://127.0.0.1:8000',
       
       // 单张生成表单
       singleForm: {
@@ -522,7 +519,7 @@ export default {
       
       try {
         const response = await uni.request({
-          url: `${this.apiBaseURL}/api/v1/text-to-image/generate`,
+          url: '/api/v1/text-to-image/generate',
           method: 'POST',
           header: {
             'Content-Type': 'application/json'
@@ -584,7 +581,7 @@ export default {
       
       try {
         const response = await uni.request({
-          url: `${this.apiBaseURL}/api/v1/text-to-image/generate-multiple`,
+          url: '/api/v1/text-to-image/generate-multiple',
           method: 'POST',
           header: {
             'Content-Type': 'application/json'
@@ -645,7 +642,7 @@ export default {
       
       try {
         const response = await uni.request({
-          url: `${this.apiBaseURL}/api/v1/text-to-image/storyboard`,
+          url: '/api/v1/text-to-image/storyboard',
           method: 'POST',
           header: {
             'Content-Type': 'application/json'
@@ -688,7 +685,7 @@ export default {
     async loadExamples() {
       try {
         const response = await uni.request({
-          url: `${this.apiBaseURL}/api/v1/text-to-image/examples`,
+          url: '/api/v1/text-to-image/examples',
           method: 'GET'
         })
         
@@ -711,7 +708,7 @@ export default {
       
       try {
         const response = await uni.request({
-          url: `${this.apiBaseURL}/api/v1/storyboard-gen/list-storyboards?limit=${this.pageSize}&offset=${offset}`,
+          url: `/api/v1/storyboard-gen/list-storyboards?limit=${this.pageSize}&offset=${offset}`,
           method: 'GET'
         })
         
@@ -774,7 +771,7 @@ export default {
       
       try {
         const response = await uni.request({
-          url: `${this.apiBaseURL}/api/v1/storyboard-gen/generate-from-db/${storyboardId}?size=1024x1024`,
+          url: `/api/v1/storyboard-gen/generate-from-db/${storyboardId}?size=1024x1024`,
           method: 'POST'
         })
         

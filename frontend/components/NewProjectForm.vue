@@ -136,7 +136,7 @@ export default {
         
         // 发送创建项目请求
         const response = await uni.request({
-          url: 'http://localhost:8000/api/v1/projects',
+          url: '/api/v1/projects',
           method: 'POST',
           header: {
             'Content-Type': 'application/json',

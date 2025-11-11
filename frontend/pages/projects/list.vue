@@ -141,7 +141,7 @@ export default {
       this.isLoading = true;
       try {
         const response = await uni.request({
-          url: `http://localhost:8000/api/v1/projects?user_id=${userInfo.user_id}`,
+          url: `/api/v1/projects?user_id=${userInfo.user_id}`,
           method: 'GET',
           header: {
             'Content-Type': 'application/json',
@@ -221,7 +221,7 @@ export default {
           if (res.confirm) {
             try {
               const response = await uni.request({
-                url: `http://localhost:8000/api/v1/projects/${project.project_id}`,
+                url: `/api/v1/projects/${project.project_id}`,
                 method: 'DELETE'
               });
               

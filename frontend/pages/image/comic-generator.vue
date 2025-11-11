@@ -136,8 +136,6 @@
 </template>
 
 <script>
-import config from '../../config/index.js'
-
 export default {
   data() {
     return {
@@ -154,8 +152,7 @@ export default {
         { label: '1024x1024（正方形，推荐）', value: '1024x1024' },
         { label: '1792x1024（横向宽屏）', value: '1792x1024' },
         { label: '1024x1792（竖向）', value: '1024x1792' }
-      ],
-      apiBaseURL: config.apiBaseURL || 'http://127.0.0.1:8000'
+      ]
     }
   },
   
@@ -184,7 +181,7 @@ export default {
     async loadStoryboardInfo() {
       try {
         const response = await uni.request({
-          url: `${this.apiBaseURL}/api/v1/storyboard-gen/storyboard/${this.storyboardId}`,
+          url: `/api/v1/storyboard-gen/storyboard/${this.storyboardId}`,
           method: 'GET'
         });
         
@@ -266,7 +263,7 @@ export default {
       
       try {
         const response = await uni.request({
-          url: `${this.apiBaseURL}/api/v1/storyboard-gen/generate-from-db/${this.storyboardId}?size=${size}`,
+          url: `/api/v1/storyboard-gen/generate-from-db/${this.storyboardId}?size=${size}`,
           method: 'POST'
         });
         

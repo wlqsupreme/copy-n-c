@@ -227,7 +227,7 @@ export default {
     async loadProjectInfo() {
       try {
         const response = await uni.request({
-          url: `http://localhost:8000/api/v1/project/${this.projectId}`,
+          url: `/api/v1/project/${this.projectId}`,
           method: 'GET'
         });
         
@@ -245,7 +245,7 @@ export default {
     async loadChapters() {
       try {
         const response = await uni.request({
-          url: `http://localhost:8000/api/v1/projects/${this.projectId}/chapters`,
+          url: `/api/v1/projects/${this.projectId}/chapters`,
           method: 'GET'
         });
         
@@ -263,7 +263,7 @@ export default {
     async loadCharacters() {
       try {
         const response = await uni.request({
-          url: `http://localhost:8000/api/v1/projects/${this.projectId}/characters`,
+          url: `/api/v1/projects/${this.projectId}/characters`,
           method: 'GET'
         });
         
@@ -310,7 +310,7 @@ export default {
       
       try {
         const response = await uni.request({
-          url: `http://localhost:8000/api/v1/character/${this.editingCharacter.character_id}`,
+          url: `/api/v1/character/${this.editingCharacter.character_id}`,
           method: 'PUT',
           data: {
             description: this.editingCharacter.description
@@ -487,7 +487,7 @@ export default {
 
         for (const update of updates) {
           await uni.request({
-            url: `http://localhost:8000/api/v1/source_text/${update.text_id}`,
+            url: `/api/v1/source_text/${update.text_id}`,
             method: 'PUT',
             data: { order_index: update.order_index }
           });

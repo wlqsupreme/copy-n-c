@@ -4,11 +4,11 @@
  */
 const config = {
   // API基础URL
-  apiBaseURL: 'http://127.0.0.1:8000',
+  apiBaseURL: '', // 使用相对路径，通过代理访问
   
   // 开发环境配置
   development: {
-    apiBaseURL: 'http://127.0.0.1:8000', // 使用 127.0.0.1 避免 IPv6 问题
+    apiBaseURL: '', // 使用相对路径，通过代理访问
     debug: true
   },
   

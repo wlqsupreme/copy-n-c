@@ -234,7 +234,7 @@
 
 		try {
 		  const response = await uni.request({
-			url: 'http://localhost:8000/api/v1/parse',
+			url: '/api/v1/parse',
 			method: 'POST',
 			header: { 'Content-Type': 'application/json' },
 			data: {
@@ -266,7 +266,7 @@
 		this.pollingInterval = setInterval(async () => {
 		  try {
 			const statusRes = await uni.request({
-			  url: `http://localhost:8000/api/v1/source_text_status/${textId}`,
+			  url: `/api/v1/source_text_status/${textId}`,
 			  method: 'GET'
 			});
 

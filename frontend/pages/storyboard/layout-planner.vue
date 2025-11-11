@@ -206,7 +206,7 @@ export default {
     async loadChapterInfo() {
       try {
         const response = await uni.request({
-          url: `http://localhost:8000/api/v1/source_texts/${this.textId}`,
+          url: `/api/v1/source_texts/${this.textId}`,
           method: 'GET'
         });
         
@@ -221,7 +221,7 @@ export default {
     async loadCharacters() {
       try {
         const response = await uni.request({
-          url: `http://localhost:8000/api/v1/projects/${this.projectId}/characters`,
+          url: `/api/v1/projects/${this.projectId}/characters`,
           method: 'GET'
         });
         
@@ -239,7 +239,7 @@ export default {
       
       try {
         const response = await uni.request({
-          url: `http://localhost:8000/api/v1/storyboards?text_id=${this.textId}`,
+          url: `/api/v1/storyboards?text_id=${this.textId}`,
           method: 'GET'
         });
         
@@ -289,7 +289,7 @@ export default {
         // 批量更新面板索引
         for (const update of updates) {
           await uni.request({
-            url: `http://localhost:8000/api/v1/storyboard/${update.storyboard_id}`,
+            url: `/api/v1/storyboard/${update.storyboard_id}`,
             method: 'PUT',
             data: { panel_index: update.panel_index }
           });
@@ -342,7 +342,7 @@ export default {
       };
       
       const response = await uni.request({
-        url: `http://localhost:8000/api/v1/storyboard/${panelId}`,
+        url: `/api/v1/storyboard/${panelId}`,
         method: 'PUT',
         data: updates
       });
@@ -366,7 +366,7 @@ export default {
       };
       
       const response = await uni.request({
-        url: `http://localhost:8000/api/v1/storyboard`,
+        url: `/api/v1/storyboard`,
         method: 'POST',
         data: newPanelData
       });
@@ -403,7 +403,7 @@ export default {
             uni.showLoading({ title: '删除中...' });
             try {
               const response = await uni.request({
-                url: `http://localhost:8000/api/v1/storyboard/${panelId}`,
+                url: `/api/v1/storyboard/${panelId}`,
                 method: 'DELETE'
               });
 
@@ -451,7 +451,7 @@ export default {
       
       try {
         const response = await uni.request({
-          url: `http://localhost:8000/api/v1/source_text/${this.textId}`,
+          url: `/api/v1/source_text/${this.textId}`,
           method: 'PUT',
           data: {
             chapter_number: parseInt(this.editingChapter.chapter_number),
