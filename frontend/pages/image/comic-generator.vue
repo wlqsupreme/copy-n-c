@@ -114,20 +114,18 @@
           </view>
 
           <!-- 生成的图片 -->
-          <view class="image-container">
-            <text class="image-title">📸 最终效果：</text>
-            
-            <image 
-              v-if="result && result.image && result.image.url" 
-              :src="result.image.url" 
-              mode="aspectFit" 
-              class="result-image"
-              @error="onImageError"
-            ></image>
-            <view v-else class="image-placeholder">
-              <text>图片加载中...</text>
+          <view v-if="result.image && result.image.url" class="image-grid">
+            <view class="image-item">
+              <image :src="result.image.url" mode="aspectFit" class="result-image"></image>
+              <view class="image-info">
+                <text v-if="result.has_dialogue" class="info-item">
+                  <text class="info-label">✨ 对话框：</text>已自动添加！文字清晰无乱码！
+                </text>
+                <text v-if="result.dialogue_count" class="info-item">
+                  <text class="info-label">对话数量：</text>{{ result.dialogue_count }} 条
+                </text>
+              </view>
             </view>
-            <text v-if="result && result.has_dialogue" class="success-tip">✨ 对话框已自动添加！文字清晰无乱码！</text>
           </view>
         </view>
         
@@ -138,11 +136,12 @@
 </template>
 
 <script>
+import config from '../../config/index.js'
+
 export default {
   data() {
     return {
       storyboardId: null,
-      imageError: null,
       projectId: null,
       textId: null,
       storyboardInfo: null,
@@ -155,7 +154,8 @@ export default {
         { label: '1024x1024（正方形，推荐）', value: '1024x1024' },
         { label: '1792x1024（横向宽屏）', value: '1792x1024' },
         { label: '1024x1792（竖向）', value: '1024x1792' }
-      ]
+      ],
+      apiBaseURL: config.apiBaseURL || 'http://127.0.0.1:8000'
     }
   },
   
@@ -184,7 +184,7 @@ export default {
     async loadStoryboardInfo() {
       try {
         const response = await uni.request({
-          url: `http://localhost:8000/api/v1/storyboard-gen/storyboard/${this.storyboardId}`,
+          url: `${this.apiBaseURL}/api/v1/storyboard-gen/storyboard/${this.storyboardId}`,
           method: 'GET'
         });
         
@@ -266,7 +266,7 @@ export default {
       
       try {
         const response = await uni.request({
-          url: `http://localhost:8000/api/v1/storyboard-gen/generate-from-db/${this.storyboardId}?size=${size}`,
+          url: `${this.apiBaseURL}/api/v1/storyboard-gen/generate-from-db/${this.storyboardId}?size=${size}`,
           method: 'POST'
         });
         
@@ -309,17 +309,6 @@ export default {
       } finally {
         this.isLoading = false;
       }
-    },
-    
-    onImageError(e) {
-      console.error('图片加载失败:', e);
-      this.imageError = '图片URL格式可能有误';
-      console.error('图片URL:', this.result ? (this.result.image ? this.result.image.url : 'no image') : 'no result');
-    },
-    
-    onImageLoad(e) {
-      console.log('图片加载成功:', e);
-      this.imageError = null;
     }
   }
 }
@@ -568,16 +557,17 @@ export default {
   margin-top: 20rpx;
 }
 
-.image-container {
-  margin-top: 40rpx;
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 40rpx;
 }
 
-.image-title {
-  font-weight: bold;
-  font-size: 32rpx;
-  color: #667eea;
-  display: block;
-  margin-bottom: 20rpx;
+.image-item {
+  background: white;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
 }
 
 .result-image {
@@ -585,41 +575,28 @@ export default {
   height: auto;
   min-height: 400rpx;
   display: block;
-  border-radius: 8rpx;
 }
 
-.success-tip {
-  text-align: center;
-  color: #4CAF50;
-  margin-top: 20rpx;
-  font-weight: bold;
+.image-info {
+  padding: 30rpx;
+}
+
+.info-item {
   font-size: 26rpx;
+  color: #333;
+  line-height: 1.6;
   display: block;
+  margin-bottom: 15rpx;
+}
+
+.info-label {
+  font-weight: bold;
+  color: #666;
 }
 
 .error-text {
   color: #f44336;
   font-size: 28rpx;
-}
-
-.image-placeholder {
-  width: 100%;
-  min-height: 400rpx;
-  background: #f0f0f0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40rpx;
-  color: #999;
-  font-size: 28rpx;
-  text-align: center;
-}
-
-.error-detail {
-  font-size: 24rpx;
-  color: #f44336;
-  margin-top: 10rpx;
 }
 </style>
 

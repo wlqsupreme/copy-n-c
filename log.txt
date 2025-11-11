@@ -1019,3 +1019,82 @@ async def generate_comic_from_db(storyboard_id: str, size: str):
 重启你的 FastAPI 服务器。
 
 你的前端页面就能正常显示图片了。
+
+
+
+
+
+
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.characters (
+  character_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL,
+  name character varying NOT NULL,
+  description text,
+  reference_image_urls json,
+  lora_model_path character varying,
+  trigger_word character varying,
+  CONSTRAINT characters_pkey PRIMARY KEY (character_id),
+  CONSTRAINT characters_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(project_id)
+);
+CREATE TABLE public.projects (
+  project_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  title character varying NOT NULL,
+  description text,
+  visibility USER-DEFINED DEFAULT 'private'::project_visibility,
+  default_style_prompt text,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  upload_method character varying DEFAULT 'single_chapter'::character varying,
+  CONSTRAINT projects_pkey PRIMARY KEY (project_id),
+  CONSTRAINT projects_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id)
+);
+CREATE TABLE public.source_texts (
+  text_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL,
+  title character varying DEFAULT 'Untitled Chapter'::character varying,
+  raw_content text NOT NULL,
+  order_index integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  processing_status character varying DEFAULT 'pending'::character varying,
+  error_message text,
+  chapter_number integer,
+  chapter_name character varying,
+  CONSTRAINT source_texts_pkey PRIMARY KEY (text_id),
+  CONSTRAINT source_texts_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(project_id)
+);
+CREATE TABLE public.storyboards (
+  storyboard_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL,
+  source_text_id uuid NOT NULL,
+  panel_index integer NOT NULL DEFAULT 0,
+  original_text_snippet text,
+  character_appearance text,
+  scene_and_lighting text,
+  camera_and_composition text,
+  expression_and_action text,
+  style_requirements text,
+  generated_image_url character varying,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  character_id uuid,
+  dialogue text,
+  panel_elements jsonb,
+  CONSTRAINT storyboards_pkey PRIMARY KEY (storyboard_id),
+  CONSTRAINT storyboards_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(project_id),
+  CONSTRAINT storyboards_source_text_id_fkey FOREIGN KEY (source_text_id) REFERENCES public.source_texts(text_id),
+  CONSTRAINT storyboards_character_id_fkey FOREIGN KEY (character_id) REFERENCES public.characters(character_id)
+);
+CREATE TABLE public.users (
+  user_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  username character varying NOT NULL UNIQUE,
+  email character varying NOT NULL UNIQUE,
+  hashed_password character varying NOT NULL,
+  credit_balance integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT users_pkey PRIMARY KEY (user_id)
+);

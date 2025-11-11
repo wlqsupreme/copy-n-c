@@ -4,11 +4,11 @@
  */
 const config = {
   // API基础URL
-  apiBaseURL: 'http://localhost:8000',
+  apiBaseURL: 'http://127.0.0.1:8000',
   
   // 开发环境配置
   development: {
-    apiBaseURL: 'http://localhost:8000',
+    apiBaseURL: 'http://127.0.0.1:8000', // 使用 127.0.0.1 避免 IPv6 问题
     debug: true
   },
   

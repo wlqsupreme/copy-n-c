@@ -19,6 +19,7 @@ from typing import Optional, List
 import os
 import sys
 import base64
+import binascii
 from datetime import datetime
 
 # 添加 backend 目录到 Python 路径
@@ -89,7 +90,41 @@ async def save_image_to_local(image_base64: str, storyboard_id: str) -> str:
         print(f"🔍 开始解码base64数据，数据长度: {len(data)}")
         print(f"🔍 base64前100字符: {data[:100]}")
         
-        image_data = base64.b64decode(data)
+        # -------------------
+        # 💡 [解决方案] 修复Base64解码问题
+        # -------------------
+        # AI或PIL生成的Base64字符串可能缺少 = padding，导致b64decode失败
+        # 我们需要手动添加padding，确保字符串长度是4的倍数
+        try:
+            # 尝试直接解码
+            image_data = base64.b64decode(data)
+        except (binascii.Error, ValueError, Exception) as e:
+            # 如果解码失败，尝试修复padding
+            print(f"⚠️ Base64解码失败，尝试修复padding: {e}")
+            
+            # 计算需要添加的padding数量（确保长度是4的倍数）
+            padding_needed = (-len(data) % 4)
+            if padding_needed:
+                padding = '=' * padding_needed
+                print(f"🔧 修复Base64 padding：添加 {padding_needed} 个 '=' 填充符")
+                data_fixed = data + padding
+                
+                try:
+                    # 再次尝试解码
+                    image_data = base64.b64decode(data_fixed)
+                    print(f"✅ 修复padding后解码成功")
+                except Exception as e2:
+                    print(f"❌ Base64解码失败 (已尝试修复padding): {e2}")
+                    print(f"   失败的Base64数据长度: {len(data)}")
+                    print(f"   失败的Base64数据 (前100字符): {data[:100]}...")
+                    raise ValueError(f"Base64解码失败: {e2}") from e2
+            else:
+                # 不需要padding但仍然失败，说明数据本身有问题
+                print(f"❌ Base64解码失败 (无需padding但仍然失败): {e}")
+                print(f"   失败的Base64数据长度: {len(data)}")
+                print(f"   失败的Base64数据 (前100字符): {data[:100]}...")
+                raise ValueError(f"Base64解码失败: {e}") from e
+        
         print(f"✅ base64解码成功，解码后数据长度: {len(image_data)} 字节")
         
         # 获取backend根目录的layout文件夹路径
@@ -561,6 +596,7 @@ async def generate_from_database_id(storyboard_id: str, size: str = "1024x1024")
                 print(f"ℹ️ 无 panel_elements 数据，返回纯画面")
             
             # 将图片（无论是否有对话框）保存到本地
+            # 我们需要这一步，因为Base64太大了，通过代理访问本地文件
             if final_image.get("url"):
                 try:
                     image_url = await save_image_to_local(
