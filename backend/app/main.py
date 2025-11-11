@@ -44,12 +44,14 @@ app = FastAPI(
 )
 
 # 添加CORS中间件，允许前端跨域访问
+# 重要：CORS 中间件必须在路由挂载之前添加，这样所有路由（包括静态文件）都会应用 CORS 头
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 在生产环境中应该指定具体的域名
+    allow_origins=["*"],  # 允许所有来源（开发环境），生产环境应指定具体域名，如 ["http://localhost:5173"]
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # 允许所有 HTTP 方法
+    allow_headers=["*"],  # 允许所有请求头
+    expose_headers=["*"],  # 暴露所有响应头，确保前端可以访问
 )
 
 # 挂载API路由
@@ -65,14 +67,19 @@ app.include_router(text_to_image.router)
 app.include_router(storyboard_image_gen.router)
 
 # 配置静态文件服务，用于提供生成的图片
+# 注意：静态文件路由会自动继承上面配置的 CORS 中间件
 # __file__ 是 backend/app/main.py
 # dirname(dirname(__file__)) = backend目录
 backend_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 static_dir = os.path.join(backend_root, "layout")
 if not os.path.exists(static_dir):
     os.makedirs(static_dir)
+# 挂载静态文件目录，所有 /layout/* 请求都会从这里提供文件
+# CORS 头会自动应用到这些静态文件响应中
 app.mount("/layout", StaticFiles(directory=static_dir), name="layout")
 print(f"📁 静态文件目录: {static_dir}")
+print(f"✅ 静态文件路由已挂载: /layout -> {static_dir}")
+print(f"✅ CORS 中间件已配置，静态文件将自动应用 CORS 头")
 
 
 # ==================== 应用生命周期管理 ====================

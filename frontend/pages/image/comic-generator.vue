@@ -12,6 +12,9 @@
     <view class="main-content">
       <view class="subtitle">为分镜生成完整的漫画图片（含对话框）</view>
 
+      <!-- 测试图片 -->
+      <image src="http://127.0.0.1:8000/layout/7ebde8d3-4d73-47be-bf5a-bd694638a058_20251111_220937.png" style="width:300px;height:300px;" @error="err"></image>
+
       <!-- 分镜信息展示 -->
       <view v-if="storyboardInfo" class="storyboard-info">
         <view class="info-box">
@@ -86,7 +89,7 @@
       </view>
 
       <!-- 生成结果 -->
-      <view class="result" v-if="result">
+      <view class="result" v-if="result.success || result.error">
         <view class="result-header">
           <text class="result-title">{{ result.success ? '✅ 生成成功' : '❌ 生成失败' }}</text>
         </view>
@@ -114,9 +117,16 @@
           </view>
 
           <!-- 生成的图片 -->
-          <view v-if="result.image && result.image.url" class="image-grid">
+          <view v-if="finalImageUrl" class="image-grid">
             <view class="image-item">
-              <image :src="result.image.url" mode="aspectFit" class="result-image"></image>
+              <image 
+                :src="finalImageUrl" 
+                mode="aspectFit" 
+                class="result-image"
+                @touchstart="handleStart"
+                @touchmove="handleMove"
+                @touchend="handleEnd"
+              ></image>
               <view class="image-info">
                 <text v-if="result.has_dialogue" class="info-item">
                   <text class="info-label">✨ 对话框：</text>已自动添加！文字清晰无乱码！
@@ -147,7 +157,10 @@ export default {
       dialogues: [],
       sizeIndex: 0,
       isLoading: false,
-      result: null,
+      result: {},
+      finalImageUrl: '',
+      isDragging: false, // 拖拽状态标志
+      baseUrl: 'http://192.168.1.7:8000', // 后端基础URL
       sizeOptions: [
         { label: '1024x1024（正方形，推荐）', value: '1024x1024' },
         { label: '1792x1024（横向宽屏）', value: '1792x1024' },
@@ -181,7 +194,7 @@ export default {
     async loadStoryboardInfo() {
       try {
         const response = await uni.request({
-          url: `/api/v1/storyboard-gen/storyboard/${this.storyboardId}`,
+          url: `${this.baseUrl}/api/v1/storyboard-gen/storyboard/${this.storyboardId}`,
           method: 'GET'
         });
         
@@ -257,13 +270,14 @@ export default {
     
     async executeGenerate() {
       this.isLoading = true;
-      this.result = null;
+      this.result = {};
+      this.finalImageUrl = '';
       
       const size = this.sizeOptions[this.sizeIndex].value;
       
       try {
         const response = await uni.request({
-          url: `/api/v1/storyboard-gen/generate-from-db/${this.storyboardId}?size=${size}`,
+          url: `${this.baseUrl}/api/v1/storyboard-gen/generate-from-db/${this.storyboardId}?size=${size}`,
           method: 'POST'
         });
         
@@ -271,19 +285,31 @@ export default {
         console.log('响应数据:', response.data);
         
         if (response.statusCode === 200 && response.data.ok) {
-      this.result = {
-        success: true,
-        image: response.data.image,
-        has_dialogue: response.data.has_dialogue,
-        dialogue_count: response.data.dialogue_count || 0,
-        dialogues: response.data.dialogues || []
-      };
+          this.result = {
+            success: true,
+            image: response.data.image,
+            has_dialogue: response.data.has_dialogue,
+            dialogue_count: response.data.dialogue_count || 0,
+            dialogues: response.data.dialogues || []
+          };
+          
+          // 统一处理图片 URL
+          const rawImageUrl = response.data.image && response.data.image.url ? response.data.image.url : '';
+          let finalUrl = rawImageUrl;
+          
+          // 相对路径：/layout/xxx.png
+          if (rawImageUrl.startsWith('/')) {
+            finalUrl = this.baseUrl + rawImageUrl;
+          }
+          
+          // 错误域名：127.0.0.1 → 换成本机局域网 IP
+          finalUrl = finalUrl.replace('127.0.0.1', '192.168.1.7');
+          
+          this.finalImageUrl = finalUrl;
       
-      console.log('设置结果:', this.result);
-      console.log('图片对象:', this.result.image);
-      console.log('图片URL:', this.result.image ? this.result.image.url : 'null');
-      console.log('图片URL类型:', typeof (this.result.image ? this.result.image.url : null));
-      console.log('图片URL长度:', this.result.image ? (this.result.image.url ? this.result.image.url.length : 0) : 0);
+          console.log('原始图片URL:', rawImageUrl);
+          console.log('处理后的图片URL:', this.finalImageUrl);
+          console.log('设置结果:', this.result);
           
           uni.showToast({
             title: '生成成功',
@@ -306,6 +332,50 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+    
+    // 拖拽事件处理函数（支持小程序和浏览器）
+    handleStart(e) {
+      // 小程序事件：e.touches[0]
+      // 浏览器事件：e (mousedown)
+      this.isDragging = true;
+      const touch = e.touches ? e.touches[0] : e;
+      console.log('开始拖拽', touch);
+      // 可以在这里添加拖拽开始的逻辑
+      // 例如：记录起始位置、设置拖拽状态等
+    },
+    
+    handleMove(e) {
+      // 小程序事件：e.touches[0] (touchmove)
+      // 浏览器事件：e (mousemove) - 只在 isDragging 为 true 时处理
+      if (!this.isDragging && !e.touches) {
+        return; // 浏览器事件：只有在拖拽状态下才处理
+      }
+      
+      const touch = e.touches ? e.touches[0] : e;
+      console.log('拖拽移动', touch);
+      // 可以在这里添加拖拽移动的逻辑
+      // 阻止默认行为，避免页面滚动
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      if (e.stopPropagation) {
+        e.stopPropagation();
+      }
+    },
+    
+    handleEnd(e) {
+      // 小程序事件：e.changedTouches[0] (touchend)
+      // 浏览器事件：e (mouseup)
+      this.isDragging = false;
+      const touch = e.changedTouches ? e.changedTouches[0] : e;
+      console.log('结束拖拽', touch);
+      // 可以在这里添加拖拽结束的逻辑
+    },
+    
+    // 图片加载错误处理
+    err(e) {
+      console.log("图片加载失败:", e);
     }
   }
 }

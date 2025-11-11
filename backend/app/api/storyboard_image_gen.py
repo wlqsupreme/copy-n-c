@@ -147,7 +147,7 @@ async def save_image_to_local(image_base64: str, storyboard_id: str) -> str:
             f.write(image_data)
         
         # 返回HTTP访问URL
-        image_url = f"http://localhost:8000/layout/{filename}"
+        image_url = f"http://127.0.0.1:8000/layout/{filename}"
         print(f"💾 图片已保存到: {filepath}")
         print(f"🌐 图片访问URL: {image_url}")
         
